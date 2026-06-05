@@ -1,0 +1,5 @@
+{
+  "name": "IPBuilding Gateway HA",
+  "country": ["NL", "BE"],
+  "homeassistant": "2023.8.0"
+}
