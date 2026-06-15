@@ -7,6 +7,17 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-06-15
+
+### Fixed
+- Power-sensor entities no longer have the device name embedded in the
+  entity's display name. The previous `f"{name} Power"` description combined
+  with `has_entity_name=True` produced names like
+  `achterdeur_licht achterdeur_licht Power`, which HA slugged to
+  `sensor.achterdeur_licht_achterdeur_licht_power`. The description now
+  uses `name="Power"`, so a device named "achterdeur_licht" produces a
+  clean `sensor.achterdeur_licht_power`.
+
 ## [0.1.4] — 2026-06-14
 
 ### Fixed
@@ -93,7 +104,8 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 - WebSocket-coordinator met automatische reconnect
 - Nederlandse en Engelse vertalingen
 
-[Unreleased]: https://github.com/markminnoye/ipbuilding-gateway-ha/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/markminnoye/ipbuilding-gateway-ha/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/markminnoye/ipbuilding-gateway-ha/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/markminnoye/ipbuilding-gateway-ha/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/markminnoye/ipbuilding-gateway-ha/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/markminnoye/ipbuilding-gateway-ha/compare/v0.1.1...v0.1.2

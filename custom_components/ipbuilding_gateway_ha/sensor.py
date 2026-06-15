@@ -28,9 +28,14 @@ def _make_power_description(device: dict[str, Any]) -> SensorEntityDescription:
     # ``original_icon`` was removed from ``EntityDescription`` in
     # Home Assistant 2026.3. The icon is set as a class attribute on the
     # entity itself in IPBuildingPowerSensor.
+    # name="Power" + _attr_has_entity_name=True makes HA derive the displayed
+    # name from the device registry name (e.g. "achterdeur_licht"), giving
+    # "achterdeur_licht Power" → sensor.achterdeur_licht_power. Embedding
+    # the device name here (as a previous version did) caused it to be
+    # appended twice.
     return SensorEntityDescription(
         key=f"{device['id']}_power",
-        name=f"{device.get('name', device['id'])} Power",
+        name="Power",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=None,

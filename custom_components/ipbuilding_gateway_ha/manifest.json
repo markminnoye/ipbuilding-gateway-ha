@@ -1,7 +1,7 @@
 {
   "domain": "ipbuilding_gateway_ha",
   "name": "IPBuilding Gateway HA",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "codeowners": ["@markminnoye"],
   "dependencies": [],
   "integration_type": "hub",
