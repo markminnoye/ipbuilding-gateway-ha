@@ -79,8 +79,17 @@ Bestanden in `custom_components/ipbuilding_gateway_ha/`:
 - `config_flow.py` — gebruiker invoer + validatie
 - `manifest.json` — HA integratie manifest
 
+## Dashboard
+
+Voor de Tier-1 hub-entities (`sensor.ipbuilding_gateway_gateway_status` +
+`button.ipbuilding_gateway_run_discovery_sweep`) is een apart Lovelace-fragment
+beschikbaar — inclusief Issues-card, button-card snippet en troubleshooting:
+
+- [custom_components/ipbuilding_gateway_ha/dashboard.md](custom_components/ipbuilding_gateway_ha/dashboard.md)
+
 ## Vereisten
 
 - Home Assistant >= 2023.8 (voor EventEntity)
 - `aiohttp` Python package
 - Gateway moet WebSocket `/ws` en REST `/api/v1/devices` exposed hebben (poort 8080)
+- Voor dashboard-card `button-card` is de HACS Frontend custom card vereist (overige cards zijn core Lovelace)
