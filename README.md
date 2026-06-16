@@ -22,8 +22,9 @@ modules are not contacted directly from Home Assistant.
 
 > **Requirement:** A running IPBuilding Gateway reachable from Home Assistant
 > (typically the HA add-on on the same host, or a gateway on your IPBuilding
-> VLAN). Install **add-on and companion at the same version** (currently
-> **v0.3.0**).
+> VLAN). Add-on and companion follow independent semver; use the
+> [latest gateway release](https://github.com/markminnoye/IPBuilding-Gateway/releases)
+> and the [latest companion release](https://github.com/markminnoye/ipbuilding-gateway-ha/releases).
 
 ## Features
 
@@ -45,9 +46,9 @@ Platforms created by this integration: `light`, `switch`, `button`, `sensor`.
 
 - Home Assistant **2023.8** or newer (tested with **2026.3** for dimmer
   `color_modes`)
-- [**IPBuilding Gateway**](https://github.com/markminnoye/IPBuilding-Gateway)
-  **v0.3.0** (add-on or standalone) with WebSocket `/ws` and REST `/api/v1/`
-  on port **8080**
+- [**IPBuilding Gateway**](https://github.com/markminnoye/IPBuilding-Gateway) —
+  any recent release (add-on or standalone) with WebSocket `/ws` and
+  REST `/api/v1/` on port **8080**
 - Network path from Home Assistant to the gateway API (host networking /
   VLAN routing as required by your install)
 - A populated `devices.json` on the gateway (from discovery or migration)
