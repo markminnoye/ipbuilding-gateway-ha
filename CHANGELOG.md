@@ -5,8 +5,23 @@ Alle notable wijzigingen aan deze custom component worden hier gedocumenteerd.
 Het format is gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/),
 en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
-Versies lopen gelijk met de **IPBuilding Gateway** add-on (`ipbuilding_gateway`)
-zodat add-on + companion als één versienummer te volgen zijn.
+## Versiebeleid
+
+De `ipbuilding-gateway-ha` companion en de **IPBuilding Gateway** add-on
+volgen **onafhankelijk semver**. Een bump in de ene repo betekent
+niet automatisch een bump in de andere.
+
+- **Patch (0.3.x)**: cosmetisch, geen impact op de REST/WS wire.
+  Werkt met alle gateway-versies die de huidige wire ondersteunen.
+- **Minor (0.x.0)**: nieuwe velden of optionele WS-events. De oude
+  gateway blijft werken, maar de companion gebruikt de nieuwe
+  velden niet tenzij de gateway ze levert.
+- **Major (x.0.0)**: breaking change. De CHANGELOG bevat dan een
+  `### Breaking:` entry die de incompatibele combinaties opsomt.
+
+Backward compatibiliteit is de norm — een versie van deze companion
+blijft werken met de huidige gateway tot een `### Breaking:`-regel
+anders meldt.
 
 ## [Unreleased]
 

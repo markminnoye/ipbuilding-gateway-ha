@@ -54,8 +54,10 @@ Platforms created by this integration: `light`, `switch`, `button`, `sensor`.
 
 ## Installation
 
-Install the **gateway** and **companion** together. Version numbers are kept
-in lockstep.
+Install the **gateway** and **companion** together. Version numbers are not
+kept in lockstep — the two repos follow independent semver. A release of
+one does not require a release of the other. Breaking changes (if any)
+are called out in each `CHANGELOG.md` under a `### Breaking:` section.
 
 ### 1. Gateway add-on (HA OS / Supervised)
 
