@@ -10,6 +10,11 @@ zodat add-on + companion als één versienummer te volgen zijn.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-06-16
+
+### Changed
+- Companion version bumped to **0.3.1** to keep lockstep with the gateway add-on. This is a build-only release on the add-on side: the add-on image at tag `v0.3.0` was missing the `zeroconf` package at runtime because the build context picked up a stale copy of `requirements-gateway.txt`. The companion code itself is unchanged from 0.3.0.
+
 ## [0.3.0] — 2026-06-16
 
 Bundelrelease: alles sinds **0.1.0** (plus wijzigingen die alleen onder
@@ -21,6 +26,7 @@ allemaal als aparte release gepubliceerd — upgrade in één stap naar
 - De integratie verschijnt in **Instellingen → Apparaten & Diensten → Ontdekt** (zelfde UX als Shelly, ESPHome, Music Assistant). Op HA OS via Supervisor-discovery; bij een standalone gateway via mDNS (`_ipbgw._tcp.local.`). Beide paden worden gededupliceerd tot één vermelding.
 - **Gateway status sensor** (diagnostisch): toont `ok` / `degraded` / `unhealthy`, versie, uptime en open issues van de gateway. Werkt via `GET /api/v1/status` en live WebSocket-updates.
 - **Discovery sweep-knop** op het gateway-apparaat: start een geforceerde veldbus-scan (`POST /api/v1/discover`) vanuit Home Assistant.
+- **Fysieke IP1100PoE-knoppen als routeerbare event-entities** (issue #4): elke knop uit `getButtons` verschijnt als `event.<naam>` onder het IP1100PoE-apparaat, drukken triggert het entity-state-event plus het bus-event `ipbuilding_gateway_ha.button_pressed`. Entities worden dynamisch aangemaakt na een discovery sweep of `POST /api/v1/modules/refresh` (gateway zorgt voor de snapshot-broadcast). Gebruik een **state trigger** op `to: "press"` in automations.
 - Inactieve kanalen (`active: false`) verschijnen als uitgeschakelde, verborgen entiteiten — inschakelen via **Instellingen → Apparaten & entiteiten** wanneer de bedrading klaar is (sinds 0.1.2).
 - Dashboard-voorbeeld (`dashboard.md`) met Lovelace-glance, discover-knop en issues-kaart.
 
