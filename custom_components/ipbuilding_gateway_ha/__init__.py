@@ -102,11 +102,9 @@ def _suggest_channel_areas(
     areas = ar.async_get(hass)
     devices = dr.async_get(hass)
 
-    snapshot = coordinator.data
-    if not isinstance(snapshot, dict):
-        return
-
-    for device in snapshot.values():
+    # ``devices_snapshot()`` returns a list and works regardless of whether
+    # the REST fallback or the WebSocket snapshot populated the cache.
+    for device in coordinator.devices_snapshot():
         room = device.get("room")
         if not room:
             continue

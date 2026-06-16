@@ -92,7 +92,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up switch entities from a config entry."""
     coordinator: IPBuildingCoordinator = hass.data[DOMAIN][entry.entry_id]
-    devices = coordinator.data if isinstance(coordinator.data, dict) else {}
+    # ``devices_snapshot()`` is the canonical read API; it works on every
+    # code path (REST fallback list, REST cached dict, WebSocket snapshot).
+    devices = coordinator.devices_snapshot()
 
     seen_unique_ids: set[str] = set()
 
@@ -113,6 +115,6 @@ async def async_setup_entry(
 
     # Initial setup: also through _add so subsequent flip-to-active
     # devices don't try to recreate already-registered entities.
-    _add(list(devices.values()))
+    _add(devices)
 
     coordinator.register_platform("switch", _add)

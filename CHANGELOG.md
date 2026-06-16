@@ -25,6 +25,11 @@ anders meldt.
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-06-16
+
+### Fixed
+- **Channel entities (lights, switches, power sensors, IP1100PoE button events) failed to appear on startup**: the REST fallback left `coordinator.data` as a list while the four platforms (and the area-suggestion helper) read it as a dict, so only the three module devices were ever registered. Platforms now go through `IPBuildingCoordinator.devices_snapshot()`, and the REST fetch also populates the internal device cache so `coordinator.data` matches the WebSocket shape.
+
 ## [0.3.7] - 2026-06-16
 
 ### Changed

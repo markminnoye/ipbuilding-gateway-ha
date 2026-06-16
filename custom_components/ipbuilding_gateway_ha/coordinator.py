@@ -125,12 +125,19 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
                     if resp.status == 200:
                         data = await resp.json()
-                        return data.get("devices", [])
-                    log.warning("REST fallback returned %s", resp.status)
-                    return []
+                        devices = data.get("devices", [])
+                    else:
+                        log.warning("REST fallback returned %s", resp.status)
+                        devices = []
         except Exception as exc:
             log.debug("REST fallback failed: %s", exc)
-            return []
+            devices = []
+        # Mirror the WS handler: cache by id so platforms that read the
+        # coordinator via ``devices_snapshot()`` get a consistent dict on
+        # every code path, and the in-memory state is no longer ahead of the
+        # ``coordinator.data`` that the DataUpdateCoordinator exposes.
+        self._data = {d["id"]: d for d in devices if d.get("id")}
+        return self._data
 
     async def async_fetch_modules(self) -> dict[str, dict[str, Any]]:
         """Poll GET /api/v1/modules and cache the result keyed by MAC.

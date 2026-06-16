@@ -133,7 +133,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up light entities from a config entry."""
     coordinator: IPBuildingCoordinator = hass.data[DOMAIN][entry.entry_id]
-    devices = coordinator.data if isinstance(coordinator.data, dict) else {}
+    # ``devices_snapshot()`` returns a list and works on every code path:
+    # REST fallback (list before v0.3.8), the dict cached after REST, and
+    # the WebSocket snapshot. Reading ``coordinator.data`` directly would
+    # diverge between those paths and silently create zero entities on
+    # first refresh.
+    devices = coordinator.devices_snapshot()
 
     # Track unique_ids we've already added to HA. Re-firing ``async_add_entities``
     # with the same unique_id makes Home Assistant log
@@ -156,8 +161,8 @@ async def async_setup_entry(
         if new_lights:
             async_add_entities(new_lights)
 
-    # Initial setup: also go through _add so a subsequent flip-to-active
+    # Initial setup: also through _add so a subsequent flip-to-active
     # for one of these devices doesn't try to recreate them.
-    _add(list(devices.values()))
+    _add(devices)
 
     coordinator.register_platform("light", _add)

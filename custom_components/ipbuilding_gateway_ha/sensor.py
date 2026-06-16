@@ -160,7 +160,7 @@ async def async_setup_entry(
     ]
     async_add_entities(hub_entities)
 
-    devices = coordinator.data if isinstance(coordinator.data, dict) else {}
+    devices = coordinator.devices_snapshot()
 
     seen_unique_ids: set[str] = set()
 
@@ -181,6 +181,6 @@ async def async_setup_entry(
 
     # Initial setup: also through _add so a subsequent flip-to-active
     # device doesn't try to recreate an already-registered power sensor.
-    _add(list(devices.values()))
+    _add(devices)
 
     coordinator.register_platform("sensor", _add)

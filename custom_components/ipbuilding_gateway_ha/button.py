@@ -118,7 +118,9 @@ async def async_setup_entry(
     represents a physical button (type=input on IP1100PoE).
     """
     coordinator: IPBuildingCoordinator = hass.data[DOMAIN][entry.entry_id]
-    devices = coordinator.data if isinstance(coordinator.data, dict) else {}
+    # ``devices_snapshot()`` is the canonical read API; it works on every
+    # code path (REST fallback list, REST cached dict, WebSocket snapshot).
+    devices = coordinator.devices_snapshot()
 
     async_add_entities([IPBuildingDiscoverButton(entry, coordinator)])
 
@@ -142,5 +144,5 @@ async def async_setup_entry(
         if new_buttons:
             async_add_entities(new_buttons)
 
-    _add(list(devices.values()))
+    _add(devices)
     coordinator.register_platform("button", _add)
