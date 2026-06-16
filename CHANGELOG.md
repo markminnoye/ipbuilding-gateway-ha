@@ -7,6 +7,24 @@ en dit project volgt [Semantic Versioning](https://semver.org/lang/nl/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-06-16
+
+### Added
+- The integration now appears in **Instellingen → Apparaten & Diensten → Ontdekt** (same UX as Shelly, ESPHome, Music Assistant). On HA OS the add-on uses Supervisor discovery; on a standalone gateway the broadcast over mDNS (`_ipbgw._tcp.local.`) is picked up. Both channels are deduplicated automatically so the operator only sees a single entry.
+
+### Changed
+- Config flow rewritten along the Music Assistant pattern. Discovery is now done by dedicated `async_step_hassio` and `async_step_zeroconf` handlers with explicit confirmation steps, instead of the previous silent auto-create in the manual step. The manual step remains as a fallback for remote or unreachable setups.
+
+### Fixed
+- The Discovered entry now actually shows up. An earlier draft of the zeroconf flow tried to read host and port from the TXT record properties, but Home Assistant puts those on the SRV/A-record instead (as `ZeroconfServiceInfo.host` and `.port`). The parser now uses the SRV values as the source of truth and only falls back to the TXT for back-compat with older gateways. Without this fix, the discovery log showed `Invalid zeroconf payload ('host or port missing from zeroconf properties')` and nothing reached the Discovered list, even though the broadcast itself was correct.
+
+## [0.2.2] — 2026-06-15
+
+### Changed
+- Module and channel devices now show **Relay** / **Dimmer** / **Input** instead of the hardware SKU (`IP0200PoE`, `IP0300PoE`, `IP1100PoE`) in Apparaat-info and the “Verbonden via …” chain. The hardware model remains on the parent module device's `model` field; operator-configured module names in `devices.json` are still respected (issue #2 follow-up).
+- Channel `device_info` now forwards the gateway's `room` field as `suggested_area`, so the onboarding “Naam geven en toewijzen” screen preselects the matching HA area. After platform setup, `_suggest_channel_areas` resolves existing HA areas by name and assigns the `area_id` automatically — without overwriting an operator's manual area assignment (issue #2).
+- Light entities now pick their icon from the channel's `semantic_type` and `device_type` via `entity_icon()` in `entity.py`: `mdi:brightness-6` for dimmer-driven lights, `mdi:lightbulb` otherwise. Switch entities now set the same icon mapping, picking between `mdi:fan`, `mdi:power-plug`, `mdi:toggle-switch-variant`, etc., instead of the default switch icon.
+
 ## [0.2.1] — 2026-06-15
 
 ### Fixed

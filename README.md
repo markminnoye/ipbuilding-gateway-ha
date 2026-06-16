@@ -8,9 +8,8 @@ HA custom component voor de **ipbuilding-gateway** (Fase 3 product-API op `8080`
    `https://github.com/markminnoye/IPBuilding-Gateway`
 2. Zoek naar **IPBuilding Gateway HA** en installeer
 3. Herstart Home Assistant
-4. Via **Integraties**: voeg `IPBuilding Gateway HA` toe
-   - Voer host + poort (`8080`) van de gateway in
-   - Validatie via `GET /api/v1/devices` — gateway moet bereikbaar zijn
+4. De integratie verschijnt nu vanzelf onder **Instellingen → Apparaten & diensten → Ontdekt** zodra de gateway (add-on of standalone) draait. Klik **Toevoegen** om te koppelen.
+   - Werkt dat niet (mDNS geblokkeerd, andere VLAN, …)? Kies dan handmatig **Integratie toevoegen → IPBuilding Gateway HA** en vul host + poort (`8080`) zelf in.
 
 ## Architectuur
 
@@ -29,16 +28,32 @@ IPBuilding veldbus (UDP/1001)
               └── sensor     (current_watt per kanaal)
 ```
 
-## Auto-detectie (HA add-on)
+## Auto-detectie
 
-Wanneer de `ipbuilding_gateway` HA add-on actief is, detecteert de companion deze automatisch via de HA Supervisor API — geen handmatige invoer van host/poort nodig.
+De companion maakt de gateway op twee manieren vindbaar in **Instellingen → Apparaten & diensten → Ontdekt** (zelfde patroon als Shelly, ESPHome en Music Assistant):
+
+| Deployment | Kanaal | Wat er gebeurt |
+|------------|--------|----------------|
+| HA add-on op HA OS / Supervised | **Supervisor discovery** | De add-on `POST /supervisor/discovery` bij opstart → Supervisor geeft het door aan Home Assistant. Geen multicast nodig. |
+| Standalone Docker / Pi op het LAN | **Zeroconf / mDNS** | Gateway broadcast `_ipbgw._tcp.local.`. Werkt alleen op een plat LAN (geen VLAN-reflector) en met host networking. |
+| Beide | Dedup | Een add-on stuurt *beide* kanalen; de Zeroconf-route bevat `homeassistant_addon=true` zodat de companion dubbele entries voorkomt. |
 
 ```
-HA Add-on draait → companion ziet ipbuilding_gateway in Supervisor
-→ automatisch 127.0.0.1:8080 → gateway bereikbaar → entities
+HA add-on draait                    Companion geïnstalleerd
+        │                                       │
+        ├─ POST /supervisor/discovery           │
+        │      service=ipbuilding_gateway_ha     │
+        ▼                                       ▼
+Supervisor ──push──►  Home Assistant  ◄──mDNS──── gateway
+                          │
+                          ▼
+                 Ontdekt-lijst: "IPBuilding Gateway HA"
+                          │
+                          ▼  klik "Toevoegen"
+                Bevestiging → config entry
 ```
 
-**Handmatig (standalone Docker / remote):** host + poort invullen in de config flow.
+Wanneer geen ontdekking mogelijk is (mDNS geblokkeerd, remote, …) blijft de handmatige setup beschikbaar via **Integratie toevoegen → IPBuilding Gateway HA**.
 
 ## Entity ID formaat
 

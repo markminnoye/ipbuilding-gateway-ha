@@ -1,7 +1,6 @@
 {
   "domain": "ipbuilding_gateway_ha",
   "name": "IPBuilding Gateway HA",
-  "version": "0.2.1",
   "codeowners": ["@markminnoye"],
   "config_flow": true,
   "dependencies": [],
@@ -10,5 +9,6 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/markminnoye/ipbuilding-gateway-ha/issues",
   "quality_scale": "bronze",
-  "supported_languages": ["en", "nl"]
+  "version": "0.3.0",
+  "zeroconf": ["_ipbgw._tcp.local."]
 }

@@ -6,11 +6,12 @@ De gateway praat rechtstreeks via **UDP/1001** met IPBuilding-modules (IP0200PoE
 
 ## Features
 
-- **Auto-discovery via Supervisor** — wanneer de `ipbuilding_gateway` HA add-on actief is, wordt host/poort (`127.0.0.1:8080`) automatisch ingevuld. Geen handmatige config nodig.
-- **Handmatige config** — voor standalone Docker of remote setups vul je host + poort zelf in.
+- **Auto-detectie via Supervisor** — wanneer de `ipbuilding_gateway` HA add-on actief is, verschijnt de integratie automatisch onder **Instellingen → Apparaten & Diensten → Ontdekt**.
+- **Zeroconf / mDNS detectie** — een standalone gateway (Docker / Pi) op het LAN verschijnt op dezelfde manier. Beide kanalen worden automatisch gededupliceerd.
+- **Handmatige config** — voor remote of onbereikbare setups vul je host + poort zelf in.
 - **Entities** — light (relay/dimmer), switch (relay/dimmer met semantic_type), button (IP1100PoE fysieke knop → HA events), sensor (per-kanaal current_watt).
 - **Real-time** — WebSocket-streaming van device-state en input-events; geen polling.
-- **Local-only** — `iot_class: local_polling`, geen cloud, geen internet nodig.
+- **Local-only** — `iot_class: local_push`, geen cloud, geen internet nodig.
 
 ## Vereisten
 
@@ -25,9 +26,10 @@ De gateway praat rechtstreeks via **UDP/1001** met IPBuilding-modules (IP0200PoE
    - Type: **Integration**
 2. Installeer **IPBuilding Gateway HA**
 3. Herstart Home Assistant
-4. **Instellingen → Apparaten & Diensten → Integratie toevoegen** → "IPBuilding Gateway HA"
-   - Bij actieve add-on: velden worden automatisch ingevuld
-   - Anders: `host:poort` van de gateway handmatig invullen
+4. De integratie verschijnt nu vanzelf onder **Instellingen → Apparaten & Diensten → Ontdekt** zodra de gateway (add-on of standalone) draait. Klik **Toevoegen** om te koppelen.
+   - Bij actieve add-on: Supervisor stuurt het discovery signaal — geen multicast nodig.
+   - Bij standalone gateway: mDNS broadcast; werkt alleen op een plat LAN met host networking.
+   - Werkt geen van beide? Kies dan handmatig **Integratie toevoegen → IPBuilding Gateway HA** en vul host + poort zelf in.
 
 ## Architectuur
 

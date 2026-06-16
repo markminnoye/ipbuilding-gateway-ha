@@ -21,7 +21,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, SEMANTIC_TYPE_LIGHT
 from .coordinator import IPBuildingCoordinator
-from .entity import apply_active_registry_defaults, build_channel_device_info
+from .entity import apply_active_registry_defaults, build_channel_device_info, entity_icon
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class IPBuildingLight(LightEntity):
             key=device["id"],
             name=None,
         )
-        self._attr_icon = "mdi:lightbulb"
+        self._attr_icon = entity_icon(device)
         # Store the update callback so the entity can be notified
         self._on_update: Callable[[dict], None] | None = None
         apply_active_registry_defaults(self, device)

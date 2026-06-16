@@ -10,10 +10,14 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import (
+    area_registry as ar,
+    device_registry as dr,
+)
 
 from .const import DOMAIN
 from .coordinator import IPBuildingCoordinator
+from .entity import module_device_name
 from .hub import gateway_device_info
 
 log = logging.getLogger(__name__)
@@ -35,6 +39,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry,
         ["light", "switch", "button", "sensor"],
     )
+    # Now that channel entities have been registered, link them to the
+    # matching HA area by name when the gateway provided a ``room`` for
+    # the channel. Devices without a match still carry ``suggested_area``
+    # from :func:`build_channel_device_info`, so the onboarding "Naam
+    # geven en toewijzen" screen offers the area as a preselect option
+    # even when no matching HA area exists yet.
+    _suggest_channel_areas(hass, entry, coordinator)
     return True
 
 
@@ -66,7 +77,7 @@ def _register_hub_devices(
         kwargs = {
             "config_entry_id": entry.entry_id,
             "identifiers": {(DOMAIN, mac)},
-            "name": module.get("name") or module.get("model") or "IPBuilding module",
+            "name": module_device_name(module),
             "manufacturer": "IPBuilding",
             "model": module.get("model") or module.get("type"),
             "via_device": (DOMAIN, entry.entry_id),
@@ -75,6 +86,34 @@ def _register_hub_devices(
         if firmware:
             kwargs["sw_version"] = firmware
         registry.async_get_or_create(**kwargs)
+
+
+def _suggest_channel_areas(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: IPBuildingCoordinator
+) -> None:
+    """Link each channel device to an HA area when ``room`` matches an existing one.
+
+    Only updates a device that does not already have an ``area_id`` — we
+    never overwrite an operator's manual area assignment.
+    """
+    areas = ar.async_get(hass)
+    devices = dr.async_get(hass)
+
+    snapshot = coordinator.data
+    if not isinstance(snapshot, dict):
+        return
+
+    for device in snapshot.values():
+        room = device.get("room")
+        if not room:
+            continue
+        area = areas.async_get_area_by_name(room)
+        if area is None:
+            continue
+        device_entry = devices.async_get_device(identifiers={(DOMAIN, device["id"])})
+        if device_entry is None or device_entry.area_id is not None:
+            continue
+        devices.async_update_device(device_entry.id, area_id=area.id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

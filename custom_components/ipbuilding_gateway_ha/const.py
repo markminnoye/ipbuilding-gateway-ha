@@ -32,3 +32,24 @@ RECONNECT_JITTER = 0.2
 
 # Polling interval for REST fallback (if WS unavailable)
 REST_POLL_INTERVAL = 20.0  # seconds
+
+# ---------------------------------------------------------------------------
+# HA discovery
+# ---------------------------------------------------------------------------
+
+#: Zeroconf service type. Must match ``SERVICE_TYPE`` in the gateway.
+#: Per RFC 6763 §7.2 the leading label (after the underscore) must be
+#: ≤ 15 bytes; ``ipbuilding-gateway`` is 18 bytes and is rejected by
+#: zeroconf's strict validator.
+ZEROCONF_SERVICE_TYPE = "_ipbgw._tcp.local."
+
+#: Discovery TXT schema version. Bump when the gateway changes the wire
+#: format in a way the companion needs to react to.
+DISCOVERY_SCHEMA_VERSION = 1
+
+#: TXT property names.
+DISCOVERY_PROP_INSTANCE_ID = "instance_id"
+DISCOVERY_PROP_BASE_URL = "base_url"
+DISCOVERY_PROP_ADDON = "homeassistant_addon"
+DISCOVERY_PROP_SCHEMA_VERSION = "schema_version"
+DISCOVERY_PROP_VERSION = "version"

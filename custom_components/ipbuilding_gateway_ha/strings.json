@@ -4,18 +4,30 @@
       "user": {
         "title": "IPBuilding Gateway",
         "description": "Enter the IP address and port of the IPBuilding Gateway.",
-        "data_schema": {
+        "data": {
           "host": "Host",
           "port": "Port"
-        },
-        "errors": {
-          "gateway_unreachable": "Could not reach the gateway at {host}:{port}. Is it running?",
-          "connection_refused": "Connection refused — is the gateway running?"
         }
+      },
+      "hassio_confirm": {
+        "title": "IPBuilding Gateway add-on detected",
+        "description": "The {addon} add-on is running and reachable. Add it to Home Assistant?"
+      },
+      "discovery_confirm": {
+        "title": "IPBuilding Gateway discovered",
+        "description": "Home Assistant found an IPBuilding Gateway at {url}. Add it?"
       }
     },
+    "error": {
+      "gateway_unreachable": "Could not reach the gateway at {host}:{port}. Is it running?",
+      "connection_refused": "Connection refused — is the gateway running?"
+    },
     "abort": {
-      "already_configured": "This gateway is already configured."
+      "already_configured": "This gateway is already configured.",
+      "cannot_connect": "Could not reach the gateway.",
+      "invalid_discovery_info": "The discovery payload was incomplete or malformed.",
+      "already_discovered_addon": "This gateway is running as a Home Assistant add-on and is already discovered via Supervisor.",
+      "not_ipbuilding_gateway_addon": "This Supervisor add-on is not the IPBuilding Gateway."
     }
   },
   "options": {
@@ -25,25 +37,25 @@
       }
     }
   },
-  "button": {
-    "pressed": {
-      "message": "IPBuilding button {hardware_id} was {action}",
-      "fields": {
-        "hardware_id": "Hardware ID",
-        "action": "Action"
+  "entity": {
+    "sensor": {
+      "gateway_status": {
+        "name": "Gateway status",
+        "state": {
+          "ok": "OK",
+          "degraded": "Degraded",
+          "unhealthy": "Unhealthy"
+        }
       }
     },
-    "discover_sweep": {
-      "name": "Run discovery sweep"
-    }
-  },
-  "sensor": {
-    "gateway_status": {
-      "name": "Gateway status",
-      "state": {
-        "ok": "OK",
-        "degraded": "Degraded",
-        "unhealthy": "Unhealthy"
+    "button": {
+      "discover_sweep": {
+        "name": "Run discovery sweep"
+      }
+    },
+    "event": {
+      "button": {
+        "name": "Button {hardware_id}"
       }
     }
   }

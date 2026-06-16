@@ -62,9 +62,14 @@ class IPBuildingEventButton(EventEntity):
 
         @callback
         def callback(data: dict) -> None:
-            self.async_trigger_event(
-                "button_pressed",
-                {"hardware_id": self._hardware_id, "action": data.get("action", "press")},
+            action = data.get("action", "press")
+            if action != "press":
+                return
+            event_data = {"hardware_id": self._hardware_id, "action": action}
+            self.async_trigger_event("press", event_data)
+            self.hass.bus.async_fire(
+                f"{DOMAIN}.button_pressed",
+                event_data,
             )
 
         self._on_button_event = callback
@@ -112,20 +117,28 @@ async def async_setup_entry(
 
     async_add_entities([IPBuildingDiscoverButton(entry, coordinator)])
 
-    buttons = []
-    for entity_id, device in devices.items():
-        # Only create buttons for input channels.
-        device_type = device.get("device_type")
-        if device_type == "input":
-            hardware_id = device["id"]
+    seen_unique_ids: set[str] = set()
+
+    def _add(devices_to_add: list[dict]) -> None:
+        new_buttons = []
+        for device in devices_to_add:
+            if device.get("device_type") != "input":
+                continue
+            hardware_id = device.get("id")
+            if not hardware_id:
+                continue
             name = device.get("name")
-            # 3-tier device tree: button is a channel on the IP1100PoE input
-            # module. Uses the shared helper so model and via_device chain are
-            # consistent with light/switch/sensor. The helper falls back to
-            # `type` when no parent module is in the cache, which is fine
-            # while companion #4 (button→action wizard) is not yet shipped.
             module = coordinator.module_for_channel(device)
             device_info = build_channel_device_info(device, module)
-            buttons.append(IPBuildingEventButton(hardware_id, name, coordinator, device_info))
+            button = IPBuildingEventButton(hardware_id, name, coordinator, device_info)
+            if button._attr_unique_id in seen_unique_ids:
+                continue
+            seen_unique_ids.add(button._attr_unique_id)
+            new_buttons.append(button)
+        for button in new_buttons:
+            coordinator.track_platform_entity("button", button._hardware_id, button)
+        if new_buttons:
+            async_add_entities(new_buttons)
 
-    async_add_entities(buttons)
+    _add(list(devices.values()))
+    coordinator.register_platform("button", _add)
