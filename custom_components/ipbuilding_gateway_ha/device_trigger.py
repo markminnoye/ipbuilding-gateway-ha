@@ -1,10 +1,15 @@
 """Device automation triggers for IPBuilding physical buttons.
 
-Surfaces a native "Button pressed" trigger in the Home Assistant
-automation editor for every IP1100PoE button device. The trigger is
-backed by the ``ipbuilding_gateway_ha.button_pressed`` bus event that
-:class:`button.IPBuildingEventButton` already fires, filtered to the
-button's hardware id so each device only reacts to its own press.
+Surfaces three native triggers in the Home Assistant automation editor
+for every IP1100PoE button device:
+
+- "Button pressed" (short tap)
+- "Long pressed" (held past the per-button threshold)
+- "Released" (let go — useful for direction-flip blueprints)
+
+Each trigger is backed by the matching bus event that
+:class:`button.IPBuildingEventButton` fires, filtered to the button's
+hardware id so each device only reacts to its own events.
 """
 
 from __future__ import annotations
@@ -23,10 +28,24 @@ from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN
 
 TRIGGER_TYPE_PRESSED = "pressed"
-TRIGGER_TYPES = {TRIGGER_TYPE_PRESSED}
+TRIGGER_TYPE_LONG_PRESSED = "long_pressed"
+TRIGGER_TYPE_RELEASED = "released"
+TRIGGER_TYPES = {
+    TRIGGER_TYPE_PRESSED,
+    TRIGGER_TYPE_LONG_PRESSED,
+    TRIGGER_TYPE_RELEASED,
+}
 
-#: HA bus event fired by IPBuildingEventButton on a physical button press.
+#: HA bus events fired by IPBuildingEventButton for each action.
 EVENT_BUTTON_PRESSED = f"{DOMAIN}.button_pressed"
+EVENT_BUTTON_LONG_PRESSED = f"{DOMAIN}.button_long_pressed"
+EVENT_BUTTON_RELEASED = f"{DOMAIN}.button_released"
+
+_TRIGGER_TYPE_TO_EVENT: dict[str, str] = {
+    TRIGGER_TYPE_PRESSED: EVENT_BUTTON_PRESSED,
+    TRIGGER_TYPE_LONG_PRESSED: EVENT_BUTTON_LONG_PRESSED,
+    TRIGGER_TYPE_RELEASED: EVENT_BUTTON_RELEASED,
+}
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES)}
@@ -56,8 +75,9 @@ async def async_get_triggers(
             CONF_PLATFORM: "device",
             CONF_DOMAIN: DOMAIN,
             CONF_DEVICE_ID: device_id,
-            CONF_TYPE: TRIGGER_TYPE_PRESSED,
+            CONF_TYPE: trigger_type,
         }
+        for trigger_type in sorted(TRIGGER_TYPES)
     ]
 
 
@@ -67,13 +87,17 @@ async def async_attach_trigger(
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
-    """Attach a device trigger, backed by the button_pressed bus event."""
+    """Attach a device trigger, backed by the matching bus event."""
+    trigger_type = config[CONF_TYPE]
+    event_type = _TRIGGER_TYPE_TO_EVENT.get(trigger_type)
+    if event_type is None:
+        raise ValueError(f"Unknown button trigger type: {trigger_type!r}")
     hardware_id = _hardware_id_for_device(hass, config[CONF_DEVICE_ID])
     event_data = {"hardware_id": hardware_id} if hardware_id else {}
     event_config = event_trigger.TRIGGER_SCHEMA(
         {
             event_trigger.CONF_PLATFORM: "event",
-            event_trigger.CONF_EVENT_TYPE: EVENT_BUTTON_PRESSED,
+            event_trigger.CONF_EVENT_TYPE: event_type,
             event_trigger.CONF_EVENT_DATA: event_data,
         }
     )

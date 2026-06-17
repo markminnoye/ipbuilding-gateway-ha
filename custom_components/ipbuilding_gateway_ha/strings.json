@@ -39,7 +39,9 @@
   },
   "device_automation": {
     "trigger_type": {
-      "pressed": "Button pressed"
+      "pressed": "Button pressed",
+      "long_pressed": "Long pressed",
+      "released": "Released"
     }
   },
   "entity": {
@@ -60,7 +62,12 @@
     },
     "event": {
       "button": {
-        "name": "Button {hardware_id}"
+        "name": "Button {hardware_id}",
+        "state": {
+          "press": "Pressed",
+          "long_press": "Long pressed",
+          "release": "Released"
+        }
       }
     }
   }

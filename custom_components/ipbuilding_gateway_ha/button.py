@@ -1,8 +1,11 @@
 """Button entity platform for IPBuilding Open.
 
 Exposes physical buttons on IP1100PoE modules as HA EventEntity
-instances. Each button press from the gateway triggers a
-`button_pressed` event in Home Assistant.
+instances. Each press/long_press/release from the gateway is routed to
+the matching ``event_type`` on the entity and to a typed bus event
+(``ipbuilding_gateway_ha.button_pressed`` / ``button_long_pressed`` /
+``button_released``) so automations and blueprints can react to
+multi-stage button interactions.
 """
 
 from __future__ import annotations
@@ -11,7 +14,11 @@ import logging
 from typing import Any, Callable
 
 from homeassistant.components.button import ButtonEntity
-from homeassistant.components.event import EventEntity, EventEntityDescription
+from homeassistant.components.event import (
+    EventDeviceClass,
+    EventEntity,
+    EventEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
@@ -24,14 +31,31 @@ from .hub import gateway_device_info
 
 log = logging.getLogger(__name__)
 
-_BUTTON_EVENT_TYPES = ["press"]
+# Event types exposed on the EventEntity. ``press`` is a fresh press, ``long_press``
+# fires when the gateway threshold is reached while the button is still held, and
+# ``release`` fires when the button is let go. ``release`` arrives even on short
+# presses so blueprints can use it for direction-flip logic.
+_BUTTON_EVENT_TYPES = ["press", "long_press", "release"]
+
+# Map action -> bus event suffix. Keep the legacy ``button_pressed`` name for
+# backward compatibility with automations written against earlier companion
+# versions.
+_ACTION_TO_BUS_EVENT: dict[str, str] = {
+    "press": "button_pressed",
+    "long_press": "button_long_pressed",
+    "release": "button_released",
+}
 
 
 class IPBuildingEventButton(EventEntity):
     """A hardware button exposed as a Home Assistant EventEntity.
 
-    Fires ``ipbuilding_gateway_ha.button_pressed`` events when the gateway
-    receives a button press from the IP1100PoE.
+    Fires the matching bus event for every action:
+    - ``ipbuilding_gateway_ha.button_pressed``
+    - ``ipbuilding_gateway_ha.button_long_pressed``
+    - ``ipbuilding_gateway_ha.button_released``
+
+    All three carry ``{"hardware_id": "<id>", "action": "<press|long_press|release>"}``.
     """
 
     _attr_has_entity_name = True
@@ -55,6 +79,7 @@ class IPBuildingEventButton(EventEntity):
             key=hardware_id,
             name=name or f"Button {hardware_id}",
             event_types=_BUTTON_EVENT_TYPES,
+            device_class=EventDeviceClass.BUTTON,
             translation_key="button",
             translation_placeholders={"hardware_id": hardware_id},
         )
@@ -67,16 +92,26 @@ class IPBuildingEventButton(EventEntity):
 
         @callback
         def _handle_button_event(data: dict) -> None:
-            action = data.get("action", "press")
-            if action != "press":
+            action = (data.get("action") or "press").lower()
+            if action not in _BUTTON_EVENT_TYPES:
+                log.debug(
+                    "Ignoring unknown button action %r for %s",
+                    action,
+                    self._hardware_id,
+                )
                 return
-            event_data = {"hardware_id": self._hardware_id, "action": action}
-            self._trigger_event("press", event_data)
+            event_data = {
+                "hardware_id": self._hardware_id,
+                "action": action,
+            }
+            self._trigger_event(action, event_data)
             self.async_write_ha_state()
-            self.hass.bus.async_fire(
-                f"{DOMAIN}.button_pressed",
-                event_data,
-            )
+            bus_suffix = _ACTION_TO_BUS_EVENT.get(action)
+            if bus_suffix:
+                self.hass.bus.async_fire(
+                    f"{DOMAIN}.{bus_suffix}",
+                    event_data,
+                )
 
         self._on_button_event = _handle_button_event
         self._coordinator.register_entity(listener_key, _handle_button_event)

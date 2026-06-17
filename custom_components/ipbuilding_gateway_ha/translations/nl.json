@@ -39,7 +39,9 @@
   },
   "device_automation": {
     "trigger_type": {
-      "pressed": "Knop ingedrukt"
+      "pressed": "Knop ingedrukt",
+      "long_pressed": "Lang ingedrukt",
+      "released": "Losgelaten"
     }
   },
   "entity": {
@@ -60,7 +62,12 @@
     },
     "event": {
       "button": {
-        "name": "Knop {hardware_id}"
+        "name": "Knop {hardware_id}",
+        "state": {
+          "press": "Ingedrukt",
+          "long_press": "Lang ingedrukt",
+          "release": "Losgelaten"
+        }
       }
     }
   }

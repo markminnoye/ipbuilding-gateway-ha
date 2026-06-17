@@ -1,0 +1,167 @@
+blueprint:
+  name: IPBuilding button — toggle + dim during hold
+  description: >
+    Single-button IP1100PoE control exposed by the IPBuilding Gateway
+    companion. Use this for a wall switch that should:
+      - toggle the target light on a short press;
+      - dim the target light while held (direction flips on release and
+        on hitting 1 % / 100 %).
+
+    The companion exposes `press`, `long_press`, and `release` events on
+    the event entity of each physical button — this blueprint hooks into
+    those via state triggers, so it does not need any extra helper wiring.
+  domain: automation
+  source_url: https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/dim_button.yaml
+
+  input:
+    button_entity:
+      name: Button
+      description: >
+        The IPBuilding event entity representing the physical wall switch
+        (e.g. `event.keuken_knop`). Must be enabled in the entity registry.
+      selector:
+        entity:
+          domain: event
+          integration: ipbuilding_gateway_ha
+
+    target_light:
+      name: Light
+      description: The light (or group) to control.
+      selector:
+        entity:
+          domain: light
+          multiple: false
+
+    direction_helper:
+      name: Dim direction helper
+      description: >
+        `input_boolean` helper that tracks the current dim direction.
+        When ON the next hold dims the light up; when OFF it dims the light
+        down. The blueprint toggles this on each release and on reaching 1 %
+        / 100 %. Create the helper in Settings → Devices & services →
+        Helpers before instantiating this blueprint.
+      default: {}
+      selector:
+        entity:
+          domain: input_boolean
+
+    dim_step_pct:
+      name: Dim step %
+      description: Brightness change per loop iteration.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: "%"
+          mode: slider
+
+    dim_interval_ms:
+      name: Dim interval (ms)
+      description: Delay between dim steps. Smaller = faster dim, more traffic.
+      default: 200
+      selector:
+        number:
+          min: 50
+          max: 2000
+          unit_of_measurement: "ms"
+          mode: slider
+
+    dim_boundary_pct:
+      name: Dim boundary %
+      description: >
+        Initial direction when no helper state is available yet (< this
+        % → up, ≥ this % → down). Also used as a soft hint at startup.
+      default: 50
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+          mode: slider
+
+mode: restart
+max: 1
+
+trigger:
+  - platform: state
+    entity_id: !input button_entity
+    to: "press"
+    id: press
+  - platform: state
+    entity_id: !input button_entity
+    to: "long_press"
+    id: hold
+  - platform: state
+    entity_id: !input button_entity
+    to: "release"
+    id: release
+  # Auto-flip on hitting either brightness endpoint.
+  - platform: numeric_state
+    entity_id: !input target_light
+    attribute: brightness
+    above: 254
+    id: hit_top
+    for:
+      seconds: 1
+  - platform: numeric_state
+    entity_id: !input target_light
+    attribute: brightness
+    below: 3
+    id: hit_bottom
+    for:
+      seconds: 1
+
+action:
+  - choose:
+      # Short press → toggle the light.
+      - conditions:
+          - condition: trigger
+            id: press
+        sequence:
+          - action: light.toggle
+            target:
+              entity_id: !input target_light
+
+      # Hold → repeat the dim loop while the trigger id is "hold".
+      - conditions:
+          - condition: trigger
+            id: hold
+        sequence:
+          - variables:
+              step: !input dim_step_pct
+              interval_ms: !input dim_interval_ms
+              sign: "{{ 1 if is_state(direction_helper, 'on') else -1 }}"
+          - repeat:
+              while:
+                - condition: trigger
+                  id: hold
+              sequence:
+                - action: light.turn_on
+                  target:
+                    entity_id: !input target_light
+                  data:
+                    brightness_step_pct: "{{ step * sign }}"
+                    transition: 0.2
+                - delay:
+                    milliseconds: !input dim_interval_ms
+
+      # Release → flip the direction helper for the next hold.
+      - conditions:
+          - condition: trigger
+            id: release
+        sequence:
+          - action: input_boolean.toggle
+            target:
+              entity_id: !input direction_helper
+
+      # Endpoint hit → flip the direction helper.
+      - conditions:
+          - condition: trigger
+            id:
+              - hit_top
+              - hit_bottom
+        sequence:
+          - action: input_boolean.toggle
+            target:
+              entity_id: !input direction_helper
