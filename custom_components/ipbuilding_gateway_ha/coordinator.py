@@ -211,6 +211,57 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_fetch_gateway_status()
         self._notify_gateway()
 
+    async def async_set_fieldbus_polling(self, enabled: bool) -> bool:
+        """Toggle the gateway's UDP/1001 poll loop (debug operator action).
+
+        POSTs to ``/api/v1/debug/fieldbus-polling`` and refreshes the cached
+        gateway status so the new state is visible to listeners without
+        waiting for the next WebSocket push. Returns True on a 200 reply;
+        False on any error (network, 4xx, 5xx) so the calling entity can
+        log and avoid an optimistic UI update.
+        """
+        url = f"http://{self._host}:{self._port}/api/v1/debug/fieldbus-polling"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={"enabled": bool(enabled)},
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    if resp.status != 200:
+                        body = await resp.text()
+                        log.warning(
+                            "Set fieldbus polling=%s returned %s: %s",
+                            enabled,
+                            resp.status,
+                            body,
+                        )
+                        return False
+        except Exception as exc:
+            log.warning("Set fieldbus polling failed: %s", exc)
+            return False
+
+        # Refresh cached gateway_status so the next listener pass observes
+        # the new fieldbus.polling_enabled + the cleared/raised warning.
+        await self.async_fetch_gateway_status()
+        self._notify_gateway()
+        return True
+
+    def fieldbus_polling_enabled(self) -> bool:
+        """Return whether the gateway is currently polling the field bus.
+
+        Reads from the cached ``gateway_status`` payload. Defaults to True
+        (the gateway's startup state) when the field is not yet known.
+        """
+        fieldbus = self._gateway_status.get("fieldbus") or {}
+        return bool(fieldbus.get("polling_enabled", True))
+
+    def fieldbus_poll_interval_s(self) -> float | None:
+        """Return the configured poll interval (seconds), or None if unknown."""
+        fieldbus = self._gateway_status.get("fieldbus") or {}
+        interval = fieldbus.get("poll_interval_s")
+        return float(interval) if interval is not None else None
+
     def register_gateway_listener(
         self, callback: Callable[[dict[str, Any]], None]
     ) -> None:
@@ -432,6 +483,10 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         elif msg_type == "discovery_completed":
             await self.async_fetch_gateway_status()
             self._notify_gateway()
+            # Heavy refresh + platform diff off the receive loop so
+            # state_changed frames are not delayed by the 5 s REST
+            # timeout on /api/v1/devices. See :meth:`_refresh_after_discovery`.
+            self.hass.async_create_task(self._refresh_after_discovery())
         else:
             log.debug("Unknown WS message type: %s", msg_type)
 
@@ -455,6 +510,25 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 cb(data)
             except Exception:
                 log.exception("Button listener error")
+
+    async def _refresh_after_discovery(self) -> None:
+        """Re-fetch modules + devices and dispatch diff after a discovery sweep.
+
+        Runs as a background task scheduled by the WS receive loop so
+        a 5 s ``/api/v1/devices`` REST timeout does not block
+        ``state_changed`` frames on the same connection. Failures are
+        logged and swallowed: a stale snapshot is preferable to a
+        crashed coordinator because discovery has already completed on
+        the gateway side.
+        """
+        try:
+            await self.async_fetch_modules()
+            await self._async_update_data()
+            devices = self.devices_snapshot()
+            self._notify_all(devices)
+            self._schedule_diff(devices)
+        except Exception:
+            log.exception("Post-discovery refresh failed")
 
     # -------------------------------------------------------------------------
     # Dynamic entity lifecycle

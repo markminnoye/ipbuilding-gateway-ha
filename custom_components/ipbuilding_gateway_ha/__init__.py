@@ -51,7 +51,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # geven en toewijzen" screen offers the area as a preselect option
     # even when no matching HA area exists yet.
     _suggest_channel_areas(hass, entry, coordinator)
+    # Run a one-shot discovery sweep if the gateway has nothing yet. The
+    # flag lives on hass.data so a subsequent async_reload (which resets
+    # the in-memory cache) does not re-enter the bootstrap and form a
+    # discover → reload → discover loop. Set the flag BEFORE scheduling
+    # the task so the second setup_entry that the reload triggers sees
+    # it and skips.
+    bootstrap_done = hass.data[DOMAIN].get(f"{entry.entry_id}_bootstrap_done")
+    if not bootstrap_done and not coordinator.devices_snapshot():
+        hass.data[DOMAIN][f"{entry.entry_id}_bootstrap_done"] = True
+        entry.async_on_unload(
+            hass.async_create_task(_bootstrap_devices(hass, entry.entry_id))
+        )
     return True
+
+
+async def _bootstrap_devices(hass: HomeAssistant, entry_id: str) -> None:
+    """Populate entities when the gateway has no devices.json yet.
+
+    Fresh add-on installs fall back to env module IPs for UDP polling but
+    expose an empty ``/api/v1/devices`` until discovery writes devices.json.
+    Trigger a forced sweep and reload the config entry so channel entities
+    appear without a manual integration reload.
+    """
+    coordinator: IPBuildingCoordinator | None = hass.data.get(DOMAIN, {}).get(entry_id)
+    entry = hass.config_entries.async_get_entry(entry_id)
+    if coordinator is None or entry is None:
+        return
+    if coordinator.devices_snapshot():
+        return
+
+    log.info("No gateway devices yet; running discovery sweep")
+    await coordinator.async_trigger_discover()
+    if coordinator.devices_snapshot():
+        await hass.config_entries.async_reload(entry_id)
 
 
 def _register_hub_devices(
