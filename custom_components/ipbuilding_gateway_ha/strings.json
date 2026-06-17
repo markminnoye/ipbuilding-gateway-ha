@@ -60,6 +60,15 @@
         "name": "Run discovery sweep"
       }
     },
+    "switch": {
+      "fieldbus_polling": {
+        "name": "Fieldbus polling (debug)",
+        "state": {
+          "on": "Polling active",
+          "off": "Polling disabled"
+        }
+      }
+    },
     "event": {
       "button": {
         "name": "Button {hardware_id}",

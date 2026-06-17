@@ -1,14 +1,21 @@
 # Dashboard — Gateway diagnostics
 
-De companion levert een Tier-1 **IPBuilding Gateway**-device met twee entities
+De companion levert een Tier-1 **IPBuilding Gateway**-device met drie entities
 voor operator-diagnostiek en -acties:
 
 | Entity | Categorie | Doel |
 |---|---|---|
 | `sensor.ipbuilding_gateway_gateway_status` | `diagnostic` | Aggregate gateway-status: `ok` / `degraded` / `unhealthy` + attributen (`issues`, `subsystems`, `version`, `uptime_seconds`, `updated_at`) |
 | `button.ipbuilding_gateway_run_discovery_sweep` | `config` | Forceert een ARP-sweep + HTTP-identify op de gateway (`POST /api/v1/discover`) |
+| `switch.ipbuilding_gateway_fieldbus_polling` (debug) | `config` | Runtime toggle voor de UDP/1001 poll-loop. **Standaard uitgeschakeld in de entity registry** — schakel hem pas in als je vermoedt dat polling interfereert met input-events of schakelaars. |
 
-Beide staan op de Tier-1 hub in **Instellingen → Apparaten → IPBuilding Gateway**.
+De eerste twee staan op de Tier-1 hub in **Instellingen → Apparaten → IPBuilding Gateway**.
+De debug-switch is `entity_registry_enabled_default = False`: hij verschijnt niet
+in Overview of het entity-overzicht tot je hem bewust inschakelt in
+**Instellingen → Entiteiten**. Doe dat alleen voor diagnose — input-knoppen
+sturen hun `B-…E`-events waarschijnlijk naar de IPBox zolang polling uit staat.
+Schakelaars en dimmers blijven werken via on-demand commando's.
+
 Ze zijn bewust als `diagnostic` / `config` gecategoriseerd zodat ze niet tussen
 de lichten/dimmers op een Overview-dashboard verschijnen.
 
@@ -174,3 +181,13 @@ custom-card-types geladen worden.
 - Bevestig dat `manifest.json` `version: 0.1.6` of hoger toont
 - Herstart HA, en herlaad de integratie (Instellingen → Apparaten & diensten → IPBuilding Gateway → ⋯ → Herladen)
 - Wis eventueel `custom_components/ipbuilding_gateway_ha/__pycache__/`
+
+### Fieldbus-polling debug-switch niet zichtbaar
+
+- De switch is standaard uitgeschakeld in de entity registry. Activeer hem
+  via **Instellingen → Entiteiten → filter `ipbuilding` → "Veldbus polling
+  (debug)" → inschakelen**.
+- Werkt alleen als de gateway ≥ 0.4.0 draait en het endpoint
+  `POST /api/v1/debug/fieldbus-polling` implementeert. Bij een oudere
+  gateway geeft de switch een foutmelding en blijft de gateway in
+  `degraded` met een issue in de status-sensor.

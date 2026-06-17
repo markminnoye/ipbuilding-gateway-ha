@@ -25,6 +25,11 @@ anders meldt.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-06-18
+
+### Added
+- **Debug switch to disable the gateway's field-bus polling loop.** A new switch `Fieldbus polling (debug)` appears on the Tier-1 `IPBuilding Gateway` device. The entity is **disabled by default in the entity registry** — enable it from **Settings → Entities** only when you suspect hub polling interferes with input events or switch behaviour. Switching it off stops the gateway's UDP/1001 keep-alive poll loop; the gateway status goes to `degraded` with a clear warning, and the gateway log explicitly notes that input events will likely be sent to the IPBox instead. Switches, dimmers and on-demand `send_command` keep working. **Requires add-on v0.4.2+** (adds the matching `POST /api/v1/debug/fieldbus-polling` endpoint). With an older gateway the switch logs an error and the gateway stays `degraded`.
+
 ## [0.4.1] - 2026-06-18
 
 ### Fixed

@@ -60,6 +60,15 @@
         "name": "Discovery sweep starten"
       }
     },
+    "switch": {
+      "fieldbus_polling": {
+        "name": "Veldbus polling (debug)",
+        "state": {
+          "on": "Polling actief",
+          "off": "Polling uit"
+        }
+      }
+    },
     "event": {
       "button": {
         "name": "Knop {hardware_id}",
