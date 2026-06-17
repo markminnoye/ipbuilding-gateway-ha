@@ -122,9 +122,11 @@ shipped with the companion at
 handles Hue-style continuous dimming during hold with automatic
 direction-flip on release and on hitting 1 % / 100 %.
 
-From **Settings → Automations → Create automation → Use blueprint**
-the blueprint is listed under the integration name; pick it, fill in
-the input fields, and you have a working single-button dimmer.
+From **Settings → Automations → Blueprints** (or **Create automation → Use
+blueprint**) the blueprint appears as `ipbuilding_gateway_ha/dim_button.yaml`
+after the integration has loaded once; missing files are copied automatically
+from the companion package into your `config/blueprints/automation/` folder.
+Pick it, fill in the input fields, and you have a working single-button dimmer.
 
 ## Development
 

@@ -27,8 +27,18 @@ anders meldt.
 
 ## [0.4.0] - 2026-06-17
 
+### Added
+- **Dim-button blueprint** (`ipbuilding_gateway_ha/dim_button.yaml`): toggle op korte druk, dimmen tijdens hold met automatische direction-flip bij loslaten en op 1 % / 100 %.
+- Packaged automation-blueprints worden bij integratie-setup automatisch naar `config/blueprints/automation/` gekopieerd wanneer ze daar nog ontbreken; bestaande bestanden worden niet overschreven.
+- IP1100PoE-knoppen: `long_press`- en `release`-eventtypes op de event-entity, plus bus-events `ipbuilding_gateway_ha.button_long_pressed` en `ipbuilding_gateway_ha.button_released` (naast het bestaande `button_pressed`).
+- Drie device triggers per knop in de automation-editor: **Button pressed**, **Long pressed**, **Released**.
+
 ### Changed
+- Fysieke knoppen en de discovery-sweepknop zijn gesplitst over het `event`- en `button`-platform; hardware-knoppen krijgen een stabiele `event.<hardware_id>` entity_id.
 - **Vernieuwde iconenset voor de integratie.** Het icoon van de companion (HACS-categorie, Apparaten & diensten) en de merkiconen in `brand/` zijn vervangen door een nieuwe set. De weergave in Instellingen → Apparaten & diensten en de merk-icon-grid gebruiken voortaan het nieuwe ontwerp; gedrag van entiteiten verandert niet.
+
+### Fixed
+- Dim-button blueprint: entity selector gebruikt het `filter:`-formaat (HA 2026.3+); `direction_helper`-variabele in de dim-repeat-actie.
 
 ## [0.3.8] - 2026-06-16
 

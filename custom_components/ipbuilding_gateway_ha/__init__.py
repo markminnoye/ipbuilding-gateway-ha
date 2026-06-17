@@ -15,6 +15,7 @@ from homeassistant.helpers import (
     device_registry as dr,
 )
 
+from .blueprints import async_install_packaged_blueprints
 from .const import DOMAIN
 from .coordinator import IPBuildingCoordinator
 from .entity import module_device_model, module_device_name
@@ -25,6 +26,7 @@ log = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up IPBuilding Open from a config entry."""
+    await async_install_packaged_blueprints(hass)
     coordinator = IPBuildingCoordinator(hass, entry)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator

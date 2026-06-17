@@ -21,8 +21,9 @@ blueprint:
         (e.g. `event.keuken_knop`). Must be enabled in the entity registry.
       selector:
         entity:
-          domain: event
-          integration: ipbuilding_gateway_ha
+          filter:
+            - domain: event
+              integration: ipbuilding_gateway_ha
 
     target_light:
       name: Light
@@ -40,7 +41,6 @@ blueprint:
         down. The blueprint toggles this on each release and on reaching 1 %
         / 100 %. Create the helper in Settings → Devices & services →
         Helpers before instantiating this blueprint.
-      default: {}
       selector:
         entity:
           domain: input_boolean
@@ -131,6 +131,7 @@ action:
           - variables:
               step: !input dim_step_pct
               interval_ms: !input dim_interval_ms
+              direction_helper: !input direction_helper
               sign: "{{ 1 if is_state(direction_helper, 'on') else -1 }}"
           - repeat:
               while:
