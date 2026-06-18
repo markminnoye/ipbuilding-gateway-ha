@@ -1,6 +1,6 @@
 {
   "domain": "ha_ipbuilding_gateway",
-  "name": "IPBuilding Gateway HA",
+  "name": "IPBuilding Gateway Companion",
   "codeowners": ["@markminnoye"],
   "config_flow": true,
   "dependencies": ["automation"],

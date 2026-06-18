@@ -177,7 +177,10 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="hassio_confirm",
-            description_placeholders={"addon": "IPBuilding Gateway"},
+            description_placeholders={
+                "url": f"http://{host}:{port}",
+                "version": "onbekend",
+            },
         )
 
     # ------------------------------------------------------------------
@@ -273,7 +276,10 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="discovery_confirm",
-            description_placeholders={"url": url},
+            description_placeholders={
+                "url": url,
+                "version": info.version or "onbekend",
+            },
         )
 
 

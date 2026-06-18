@@ -11,11 +11,11 @@
       },
       "hassio_confirm": {
         "title": "IPBuilding Gateway add-on detected",
-        "description": "The {addon} add-on is running and reachable. Add it to Home Assistant?"
+        "description": "Add-on running at {url} (gateway {version}). Add it to Home Assistant?"
       },
       "discovery_confirm": {
         "title": "IPBuilding Gateway discovered",
-        "description": "Home Assistant found an IPBuilding Gateway at {url}. Add it?"
+        "description": "Found IPBuilding Gateway {version} at {url}. Add it?"
       },
       "onboarding_intro": {
         "title": "Set up your installation",
