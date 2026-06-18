@@ -16,6 +16,26 @@
       "discovery_confirm": {
         "title": "IPBuilding Gateway ontdekt",
         "description": "Home Assistant heeft een IPBuilding Gateway gevonden op {url}. Toevoegen?"
+      },
+      "onboarding_intro": {
+        "title": "Installatie instellen",
+        "description": "We scannen de veldbus, koppelen ruimtes aan HA-areas en bereiden je apparaten voor. Knopacties volgen in een latere update.",
+        "menu_options": {
+          "start": "Start instellen",
+          "skip": "Nu overslaan"
+        }
+      },
+      "onboarding_discovery": {
+        "title": "Veldbus scan",
+        "description": "Scan voltooid. Toegevoegd: {added}, gewijzigd: {changed}, verwijderd: {removed}. Duur: {duration_s} s. Ga verder naar ruimte-mapping."
+      },
+      "onboarding_rooms": {
+        "title": "Ruimtes koppelen aan areas",
+        "description": "Koppel {room_count} IPBuilding-ruimte(n) aan Home Assistant areas. Laat leeg om een area met dezelfde naam aan te maken."
+      },
+      "onboarding_done": {
+        "title": "Instellen voltooid",
+        "description": "Discovery voegde {added} module(s) toe. {room_count} ruimte(n) gekoppeld. Knop→actie-mapping volgt in een latere release. Je kunt deze wizard opnieuw starten via integratie-opties."
       }
     },
     "error": {
@@ -27,13 +47,17 @@
       "cannot_connect": "Kan de gateway niet bereiken.",
       "invalid_discovery_info": "Het discovery-payload was onvolledig of ongeldig.",
       "already_discovered_addon": "Deze gateway draait als Home Assistant add-on en is al ontdekt via Supervisor.",
-      "not_ipbuilding_gateway_addon": "Deze Supervisor add-on is niet de IPBuilding Gateway."
+      "not_ipbuilding_gateway_addon": "Deze Supervisor add-on is niet de IPBuilding Gateway.",
+      "onboarding_complete": "Onboarding afgerond."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "IPBuilding Gateway Opties"
+        "title": "IPBuilding Gateway Opties",
+        "menu_options": {
+          "run_onboarding": "Setup-wizard opnieuw uitvoeren"
+        }
       }
     }
   },

@@ -130,6 +130,19 @@ when discovery is blocked (VLAN without mDNS reflector, remote host, etc.):
 The config flow validates `GET /api/v1/status` before saving. Only one config
 entry per gateway instance is allowed.
 
+### Onboarding wizard
+
+After the first successful setup, a **setup wizard** opens automatically (you
+can skip it). It runs a **field-bus discovery sweep** with a progress screen,
+then lets you map IPBuilding `room` names to Home Assistant **areas**.
+
+Re-run later via **Settings → Devices & Services → IPBuilding Gateway HA →
+Configure → Run setup wizard again**.
+
+Physical IP1100PoE button entities are **enabled by default**. Channels marked
+`active: false` in the gateway `devices.json` remain disabled and hidden until
+you enable them under **Settings → Entities**.
+
 ## Dashboard
 
 A ready-to-paste Lovelace snippet for gateway status and the discovery-sweep

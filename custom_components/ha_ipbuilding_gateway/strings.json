@@ -16,6 +16,29 @@
       "discovery_confirm": {
         "title": "IPBuilding Gateway discovered",
         "description": "Home Assistant found an IPBuilding Gateway at {url}. Add it?"
+      },
+      "onboarding_intro": {
+        "title": "Set up your installation",
+        "description": "We will scan the field bus, map rooms to Home Assistant areas, and prepare your devices. Button actions can be configured in a later update.",
+        "menu_options": {
+          "start": "Start setup",
+          "skip": "Skip for now"
+        }
+      },
+      "onboarding_discovery": {
+        "title": "Field bus scan",
+        "description": "Scan complete. Added: {added}, changed: {changed}, removed: {removed}. Duration: {duration_s} s. Continue to room mapping."
+      },
+      "onboarding_rooms": {
+        "title": "Map rooms to areas",
+        "description": "Link {room_count} IPBuilding room(s) to Home Assistant areas. Leave empty to create an area with the same name.",
+        "data": {
+          "area_0": "Area for {room_0}"
+        }
+      },
+      "onboarding_done": {
+        "title": "Setup complete",
+        "description": "Discovery added {added} module(s). {room_count} room(s) mapped. Button-to-action mapping will be available in a future release. You can re-run this wizard from integration options."
       }
     },
     "error": {
@@ -27,13 +50,17 @@
       "cannot_connect": "Could not reach the gateway.",
       "invalid_discovery_info": "The discovery payload was incomplete or malformed.",
       "already_discovered_addon": "This gateway is running as a Home Assistant add-on and is already discovered via Supervisor.",
-      "not_ipbuilding_gateway_addon": "This Supervisor add-on is not the IPBuilding Gateway."
+      "not_ipbuilding_gateway_addon": "This Supervisor add-on is not the IPBuilding Gateway.",
+      "onboarding_complete": "Onboarding finished."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "IPBuilding Gateway Options"
+        "title": "IPBuilding Gateway Options",
+        "menu_options": {
+          "run_onboarding": "Run setup wizard again"
+        }
       }
     }
   },

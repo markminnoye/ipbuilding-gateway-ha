@@ -63,3 +63,11 @@ DISCOVERY_PROP_BASE_URL = "base_url"
 DISCOVERY_PROP_ADDON = "homeassistant_addon"
 DISCOVERY_PROP_SCHEMA_VERSION = "schema_version"
 DISCOVERY_PROP_VERSION = "version"
+
+# ---------------------------------------------------------------------------
+# Onboarding wizard
+# ---------------------------------------------------------------------------
+
+CONF_ONBOARDING_COMPLETED = "onboarding_completed"
+CONF_ONBOARDING_SKIPPED = "onboarding_skipped"
+CONF_ROOM_MAPPINGS = "room_mappings"

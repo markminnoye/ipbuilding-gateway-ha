@@ -194,9 +194,16 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             log.debug("Gateway health fallback failed: %s", exc)
         return self._gateway_status
 
-    async def async_trigger_discover(self) -> None:
-        """Run POST /api/v1/discover on the gateway."""
+    async def async_run_discover_with_result(self) -> dict[str, Any]:
+        """Run POST /api/v1/discover and return the gateway sweep summary."""
         url = f"http://{self._host}:{self._port}/api/v1/discover"
+        result: dict[str, Any] = {
+            "ok": False,
+            "added": [],
+            "changed": [],
+            "removed": [],
+            "duration_ms": 0,
+        }
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -205,11 +212,27 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     if resp.status != 200:
                         log.warning("Discover sweep returned %s", resp.status)
                     else:
-                        log.info("Discover sweep completed: %s", await resp.text())
+                        payload = await resp.json()
+                        result = {
+                            "ok": bool(payload.get("ok")),
+                            "added": list(payload.get("added") or []),
+                            "changed": list(payload.get("changed") or []),
+                            "removed": list(payload.get("removed") or []),
+                            "duration_ms": int(payload.get("duration_ms") or 0),
+                        }
+                        log.info("Discover sweep completed: %s", result)
         except Exception as exc:
             log.warning("Discover sweep failed: %s", exc)
+
         await self.async_fetch_gateway_status()
+        await self.async_fetch_modules()
+        await self.async_request_refresh()
         self._notify_gateway()
+        return result
+
+    async def async_trigger_discover(self) -> None:
+        """Run POST /api/v1/discover on the gateway."""
+        await self.async_run_discover_with_result()
 
     def register_gateway_listener(
         self, callback: Callable[[dict[str, Any]], None]

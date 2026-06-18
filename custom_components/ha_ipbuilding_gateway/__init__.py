@@ -16,7 +16,7 @@ from homeassistant.helpers import (
 )
 
 from .blueprints import async_install_packaged_blueprints
-from .const import DOMAIN
+from .const import CONF_ONBOARDING_COMPLETED, CONF_ONBOARDING_SKIPPED, DOMAIN
 from .coordinator import IPBuildingCoordinator
 from .entity import module_device_model, module_device_name
 from .hub import gateway_device_info
@@ -63,7 +63,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.async_on_unload(
             hass.async_create_task(_bootstrap_devices(hass, entry.entry_id))
         )
+    if not entry.data.get(CONF_ONBOARDING_COMPLETED) and not entry.data.get(
+        CONF_ONBOARDING_SKIPPED
+    ):
+        hass.async_create_task(_maybe_launch_onboarding(hass, entry))
     return True
+
+
+async def _maybe_launch_onboarding(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Open the onboarding wizard after the first successful setup."""
+    await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "onboarding", "entry_id": entry.entry_id},
+    )
 
 
 async def _bootstrap_devices(hass: HomeAssistant, entry_id: str) -> None:

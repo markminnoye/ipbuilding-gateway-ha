@@ -25,6 +25,10 @@ anders meldt.
 
 ## [Unreleased]
 
+### Added
+- **Onboarding wizard (Sprint 1):** na eerste installatie opent een setup-wizard (overslaan mogelijk) met veldbus discovery sweep (visuele voortgang + resultaat), ruimte→HA-area mapping, en herstart via integratie-opties.
+- IP1100PoE-knoppen zijn standaard **ingeschakeld** in de entity registry (gateway stuurt geen `active: false` meer); inactieve relay/dimmer-kanalen (`active: false` in `devices.json`) blijven disabled+hidden.
+
 ## [1.0.0] - 2026-06-18
 
 ### Breaking
