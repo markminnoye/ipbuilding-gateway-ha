@@ -48,3 +48,25 @@ def build_channel_entity_index(
         if entity_id:
             index[(last_octet, int(channel))] = entity_id
     return index
+
+
+def build_channel_name_index(
+    devices: list[dict[str, Any]],
+) -> dict[tuple[int, int], str]:
+    """Map ``(module IP last octet, channel)`` -> friendly channel name.
+
+    Used to label generated button automations ("<button> → <channel name>").
+    """
+    index: dict[tuple[int, int], str] = {}
+    for dev in devices:
+        module_ip = str(dev.get("module_ip") or "")
+        channel = dev.get("channel")
+        name = dev.get("name")
+        if channel is None or not name or "." not in module_ip:
+            continue
+        try:
+            last_octet = int(module_ip.rsplit(".", 1)[-1])
+        except ValueError:
+            continue
+        index[(last_octet, int(channel))] = str(name)
+    return index

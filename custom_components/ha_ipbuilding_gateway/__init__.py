@@ -15,6 +15,7 @@ from homeassistant.helpers import (
     device_registry as dr,
 )
 
+from .automation_store import async_write_button_automations
 from .blueprints import async_install_packaged_blueprints
 from .button_automation_builder import collect_automations
 from .button_mapping import SLOT_LONG_PRESS, SLOT_PRESS, SLOT_RELEASE, parse_buttons
@@ -28,7 +29,7 @@ from .coordinator import IPBuildingCoordinator
 from .entity import module_device_model, module_device_name
 from .hub import gateway_device_info
 from .room_mapping import apply_room_mappings
-from .target_resolver import build_channel_entity_index
+from .target_resolver import build_channel_entity_index, build_channel_name_index
 
 log = logging.getLogger(__name__)
 
@@ -113,19 +114,27 @@ async def _import_button_automations(
     if not parsed:
         return
 
-    channel_index = build_channel_entity_index(hass, coordinator.devices_snapshot())
+    snapshot = coordinator.devices_snapshot()
+    channel_index = build_channel_entity_index(hass, snapshot)
+    name_index = build_channel_name_index(snapshot)
+
+    # Resolve every configured slot (press/long/release) to its HA target so
+    # the input module's mapping is taken over wholesale.
     targets: dict[tuple[str, str], str] = {}
+    target_names: dict[tuple[str, str], str] = {}
     for button in parsed:
         for action in button.actions:
-            if action.slot != SLOT_PRESS or action.warning:
+            if action.warning:
                 continue
             if action.target_ip_last_octet is None or action.target_channel is None:
                 continue
-            entity_id = channel_index.get(
-                (action.target_ip_last_octet, action.target_channel)
-            )
-            if entity_id:
-                targets[(button.hardware_id, action.slot)] = entity_id
+            key = (action.target_ip_last_octet, action.target_channel)
+            entity_id = channel_index.get(key)
+            if not entity_id:
+                continue
+            targets[(button.hardware_id, action.slot)] = entity_id
+            if key in name_index:
+                target_names[(button.hardware_id, action.slot)] = name_index[key]
 
     device_registry = dr.async_get(hass)
     hardware_ids = {p.hardware_id for p in parsed}
@@ -139,21 +148,22 @@ async def _import_button_automations(
         parsed,
         button_device_ids=button_device_ids,
         target_entity_ids=targets,
-        modules_snapshot=coordinator.modules,
+        target_names=target_names,
         include_slots=(SLOT_PRESS, SLOT_LONG_PRESS, SLOT_RELEASE),
     )
+    if not automations:
+        return
 
+    # Write them as real, editable HA automations and reload.
+    await async_write_button_automations(hass, automations)
+
+    # Record what we generated so a later setup/reload does not re-import.
     options = dict(entry.options)
     options[CONF_BUTTON_AUTOMATIONS] = {
         "targets": {f"{k[0]}|{k[1]}": v for k, v in targets.items()},
         "automations": automations,
     }
     hass.config_entries.async_update_entry(entry, options=options)
-
-    try:
-        await hass.services.async_call("automation", "reload", blocking=False)
-    except Exception as exc:
-        log.debug("automation.reload skipped: %s", exc)
 
 
 async def _bootstrap_devices(hass: HomeAssistant, entry_id: str) -> None:

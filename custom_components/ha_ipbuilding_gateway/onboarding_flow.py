@@ -18,8 +18,9 @@ from .const import (
     CONF_ROOM_MAPPINGS,
     DOMAIN,
 )
+from .automation_store import async_write_button_automations
 from .room_mapping import apply_room_mappings, collect_unique_rooms
-from .target_resolver import build_channel_entity_index
+from .target_resolver import build_channel_entity_index, build_channel_name_index
 
 from .button_automation_builder import (
     collect_automations,
@@ -442,13 +443,30 @@ class OnboardingFlowMixin:
                 }:
                     button_device_ids[identifier] = device.id
 
+        # Friendly target names for the automation aliases ("<button> → <name>").
+        name_index = build_channel_name_index(coordinator.devices_snapshot())
+        snapshot_by_entity: dict[str, tuple[int, int]] = {}
+        channel_index = build_channel_entity_index(
+            self.hass, coordinator.devices_snapshot()
+        )
+        for key, entity_id in channel_index.items():
+            snapshot_by_entity[entity_id] = key
+        target_names: dict[tuple[str, str], str] = {}
+        for (hardware_id, slot), entity_id in targets.items():
+            key = snapshot_by_entity.get(entity_id)
+            if key and key in name_index:
+                target_names[(hardware_id, slot)] = name_index[key]
+
         automations = collect_automations(
             parsed,
             button_device_ids=button_device_ids,
             target_entity_ids=targets,
-            modules_snapshot=coordinator.modules,
+            target_names=target_names,
             include_slots=(SLOT_PRESS, SLOT_LONG_PRESS, SLOT_RELEASE),
         )
+
+        # Write them as real, editable HA automations and reload.
+        await async_write_button_automations(self.hass, automations)
 
         entry = self._entry()
         options = dict(entry.options)
@@ -457,14 +475,5 @@ class OnboardingFlowMixin:
             "automations": automations,
         }
         self.hass.config_entries.async_update_entry(entry, options=options)
-
-        # Best-effort reload of the automations integration so the new
-        # automations appear without a manual restart.
-        try:
-            await self.hass.services.async_call(
-                "automation", "reload", blocking=False
-            )
-        except Exception as exc:
-            log.debug("automation.reload skipped: %s", exc)
 
         return await self.async_step_onboarding_done()

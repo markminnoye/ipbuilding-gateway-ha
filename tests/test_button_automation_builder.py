@@ -62,14 +62,8 @@ def _parsed_button(hardware_id: str = "deadbeef0001", *, slot_action_pairs=()):
     )
 
 
-MODULES = {
-    "00:24:77:AA:BB:01": {"ip": "10.10.1.30", "type": "relay"},
-    "00:24:77:AA:BB:02": {"ip": "10.10.1.40", "type": "dimmer"},
-}
-
-
 # ---------------------------------------------------------------------------
-# Action strategy tests
+# Action strategy tests (modern automation schema)
 # ---------------------------------------------------------------------------
 
 
@@ -80,14 +74,23 @@ def test_relay_on_uses_turn_on() -> None:
         "press",
         button_device_id="device-abc",
         target_entity_id="light.keuken",
-        modules_snapshot=MODULES,
+        target_name="Keuken LED",
     )
     assert automation is not None
     assert automation["id"] == "ipb_map_deadbeef0001_press"
-    assert automation["action"][0]["service"] == "light.turn_on"
-    assert automation["action"][0]["target"]["entity_id"] == "light.keuken"
-    assert automation["initial_state"] is False
-    assert automation["trigger"][0]["type"] == "pressed"
+    assert automation["alias"] == "Keuken knop → Keuken LED"
+    assert automation["description"] == ""
+    assert automation["mode"] == "single"
+    assert automation["conditions"] == []
+    assert automation["actions"][0]["action"] == "light.turn_on"
+    assert automation["actions"][0]["target"]["entity_id"] == "light.keuken"
+    trigger = automation["triggers"][0]
+    assert trigger["trigger"] == "device"
+    assert trigger["domain"] == "ha_ipbuilding_gateway"
+    assert trigger["device_id"] == "device-abc"
+    assert trigger["type"] == "pressed"
+    # No initial_state — the imported automations are enabled.
+    assert "initial_state" not in automation
 
 
 def test_relay_toggle_uses_toggle_service() -> None:
@@ -97,9 +100,10 @@ def test_relay_toggle_uses_toggle_service() -> None:
         "press",
         button_device_id="device-abc",
         target_entity_id="light.keuken",
-        modules_snapshot=MODULES,
     )
-    assert automation["action"][0]["service"] == "light.toggle"
+    assert automation["actions"][0]["action"] == "light.toggle"
+    # Falls back to the entity id when no friendly name is supplied.
+    assert automation["alias"] == "Keuken knop → light.keuken"
 
 
 def test_missing_button_device_id_returns_none() -> None:
@@ -110,7 +114,6 @@ def test_missing_button_device_id_returns_none() -> None:
             "press",
             button_device_id=None,
             target_entity_id="light.keuken",
-            modules_snapshot=MODULES,
         )
         is None
     )
@@ -124,27 +127,23 @@ def test_missing_target_entity_returns_none() -> None:
             "press",
             button_device_id="device-abc",
             target_entity_id=None,
-            modules_snapshot=MODULES,
         )
         is None
     )
 
 
-def test_allon_module_scope_automation() -> None:
-    """Special outType with action 'on' produces a module-scope automation."""
-    parsed = _parsed_button(
-        slot_action_pairs=[("press", "special", 30, 0, "on")]
+def test_special_outtype_is_skipped() -> None:
+    """The legacy 'special'/all-on family has no single target — skipped."""
+    parsed = _parsed_button(slot_action_pairs=[("press", "special", 30, 0, "on")])
+    assert (
+        button_automation_builder.build_automation_for_action(
+            parsed,
+            "press",
+            button_device_id="device-abc",
+            target_entity_id=None,
+        )
+        is None
     )
-    automation = button_automation_builder.build_automation_for_action(
-        parsed,
-        "press",
-        button_device_id="device-abc",
-        target_entity_id=None,
-        modules_snapshot=MODULES,
-    )
-    assert automation is not None
-    assert automation["action"][0]["service"] == "light.turn_on"
-    assert automation["action"][0]["target"]["group_id"] == "ipb_module_30"
 
 
 def test_warning_action_returns_none() -> None:
@@ -170,7 +169,6 @@ def test_warning_action_returns_none() -> None:
             "press",
             button_device_id="device-abc",
             target_entity_id="light.keuken",
-            modules_snapshot=MODULES,
         )
         is None
     )
@@ -195,11 +193,16 @@ def test_collect_automations_emits_press_long_press_and_release() -> None:
         ("deadbeef0001", "long_press"): "light.bureau",
         ("deadbeef0001", "release"): "light.keuken",
     }
+    names = {
+        ("deadbeef0001", "press"): "Keuken",
+        ("deadbeef0001", "long_press"): "Bureau",
+        ("deadbeef0001", "release"): "Keuken",
+    }
     out = button_automation_builder.collect_automations(
         [parsed],
         button_device_ids=button_ids,
         target_entity_ids=targets,
-        modules_snapshot=MODULES,
+        target_names=names,
         include_slots=("press", "long_press", "release"),
     )
     assert len(out) == 3
@@ -207,6 +210,9 @@ def test_collect_automations_emits_press_long_press_and_release() -> None:
     assert "ipb_map_deadbeef0001_press" in ids
     assert "ipb_map_deadbeef0001_long_press" in ids
     assert "ipb_map_deadbeef0001_release" in ids
+    aliases = {a["alias"] for a in out}
+    assert "Keuken knop → Keuken" in aliases  # press alias has no slot marker
+    assert "Keuken knop (lang) → Bureau" in aliases
 
 
 def test_summarise_for_wizard_counts() -> None:
