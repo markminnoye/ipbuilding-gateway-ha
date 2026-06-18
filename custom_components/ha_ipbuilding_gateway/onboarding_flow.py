@@ -215,8 +215,15 @@ class OnboardingFlowMixin:
         # Room names are unique (collect_unique_rooms dedupes).
         schema_dict: dict[Any, Any] = {}
         placeholders: dict[str, str] = {"room_count": str(len(self._rooms_list))}
+        areas = ar.async_get(self.hass)
         for room in self._rooms_list:
-            schema_dict[vol.Optional(room, default="")] = selector.AreaSelector()
+            # Pre-select an existing HA area with the same name so the dropdown
+            # defaults to e.g. "1e Verdiep" for the gateway room "1e Verdiep";
+            # the operator can still override or clear it.
+            existing = areas.async_get_area_by_name(room)
+            schema_dict[vol.Optional(room, default=existing.id if existing else "")] = (
+                selector.AreaSelector()
+            )
 
         return self.async_show_form(
             step_id="onboarding_rooms",
