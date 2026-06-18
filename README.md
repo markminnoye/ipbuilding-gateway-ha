@@ -130,6 +130,29 @@ button is in
 [`custom_components/ipbuilding_gateway_ha/dashboard.md`](custom_components/ipbuilding_gateway_ha/dashboard.md)
 (includes optional HACS **button-card** notes).
 
+## Blueprints
+
+The companion ships a small set of automation blueprints targeting
+IP1100PoE physical buttons. They are copied into
+`config/blueprints/automation/ipbuilding_gateway_ha/` automatically when
+the integration loads and are upgraded in place on every companion
+release.
+
+| Blueprint | When to use |
+|-----------|-------------|
+| [`button_toggle`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_toggle.yaml) | Single tap toggles a light or switch, or all lights in a room |
+| [`button_standard`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_standard.yaml) | Short and/or long press, each with on / off / toggle / scene for an entity or all lights in an area |
+| [`button_dim`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_dim.yaml) | Toggle on short press, dim while held with auto direction-flip (requires an `input_boolean` helper) |
+| [`button_cover`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_cover.yaml) | Hold = open or close a curtain / screen, release = stop |
+
+The legacy `dim_button` blueprint is shipped only as a deprecation stub
+that surfaces a `persistent_notification` to migrate to `button_dim.yaml`.
+New automations should never reference it.
+
+Each blueprint lets you set an automation alias and area directly. Use the
+friendly button name (visible in the entity picker), not the `event.<id>`
+entity id, for the alias — the entity id is intentionally not human-readable.
+
 ## Actions
 
 The integration does not register custom services for device control. Use

@@ -1,0 +1,116 @@
+# ipbuilding_blueprint_version: 1
+blueprint:
+  name: IPBuilding wandknop — toggle
+  description: >
+    Minimal single-button control for an IPBuilding IP1100PoE wall switch.
+    Each short press toggles a light, switch, or all lights in an area.
+
+    For more advanced patterns (separate actions on short vs long press,
+    dim-during-hold, curtains, scenes) use the companion blueprints:
+      - `button_standard` — short/long press with on/off/toggle/scene
+      - `button_dim` — toggle + dim while held
+      - `button_cover` — hold-to-move / release-to-stop for curtains
+  domain: automation
+  source_url: https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_toggle.yaml
+
+  input:
+    automation_name:
+      name: Naam automatisering
+      description: >
+        Gebruik de weergavenaam van de knop (zichtbaar in de entity-kiezer),
+        bv. "Keuken wandknop → Keuken LED". De entity_id `event.<hardware_id>`
+        is bewust niet leesbaar en hoort niet in de alias.
+      default: ""
+      selector:
+        text:
+
+    button_entity:
+      name: Knop
+      description: >
+        De IPBuilding event-entity van de fysieke wandknop
+        (bv. `event.2f8185190000df`). De entity moet ingeschakeld zijn
+        in Instellingen → Apparaten & entiteiten.
+      selector:
+        entity:
+          filter:
+            - domain: event
+              integration: ipbuilding_gateway_ha
+
+    automation_area:
+      name: Ruimte
+      description: >
+        Ruimte voor de automatisering. De companion zet de `room` uit
+        devices.json als `suggested_area` op het knop-device; kies hier
+        dezelfde ruimte zodat de automatisering in de Lovelace-ruimte
+        verschijnt.
+      default: ""
+      selector:
+        area:
+
+    target_kind:
+      name: Doeltype
+      description: >
+        Eén entity (lamp, schakelaar) of alle lampen in een ruimte.
+        Bij "Ruimte" wordt `light.toggle` met `area_id` aangeroepen.
+      default: entity
+      selector:
+        select:
+          options:
+            - label: Eén entity
+              value: entity
+            - label: Alle lampen in een ruimte
+              value: area
+
+    target_entity:
+      name: Entity
+      description: >
+        Lamp, schakelaar of groep die moet togglen. Alleen zichtbaar
+        bij doeltype "Eén entity".
+      default: ""
+      selector:
+        target:
+          entity:
+            domain:
+              - light
+              - switch
+
+    target_area:
+      name: Ruimte
+      description: >
+        Alle lampen in deze ruimte worden getoggeld. Alleen zichtbaar
+        bij doeltype "Alle lampen in een ruimte".
+      default: ""
+      selector:
+        area:
+
+alias: !input automation_name
+area_id: !input automation_area
+mode: single
+
+variables:
+  target_kind: !input target_kind
+  target_entity: !input target_entity
+  target_area: !input target_area
+
+trigger:
+  - platform: state
+    entity_id: !input button_entity
+    to: "press"
+    id: press
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ target_kind == 'entity' and target_entity | length > 0 }}"
+        sequence:
+          - action: homeassistant.toggle
+            target: !input target_entity
+
+      - conditions:
+          - condition: template
+            value_template: "{{ target_kind == 'area' and target_area | length > 0 }}"
+        sequence:
+          - action: light.toggle
+            target:
+              area_id: !input target_area

@@ -93,7 +93,15 @@ async def async_attach_trigger(
     if event_type is None:
         raise ValueError(f"Unknown button trigger type: {trigger_type!r}")
     hardware_id = _hardware_id_for_device(hass, config[CONF_DEVICE_ID])
-    event_data = {"hardware_id": hardware_id} if hardware_id else {}
+    if not hardware_id:
+        # Fail loud: an empty event_data filter would match *every* button
+        # event in the system, not just the one for this device. That's a
+        # silent cross-device automation leak and must not happen.
+        raise ValueError(
+            f"Cannot attach IPBuilding button trigger: no hardware id found "
+            f"for device {config[CONF_DEVICE_ID]!r}"
+        )
+    event_data = {"hardware_id": hardware_id}
     event_config = event_trigger.TRIGGER_SCHEMA(
         {
             event_trigger.CONF_PLATFORM: "event",

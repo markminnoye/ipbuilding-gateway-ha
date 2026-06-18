@@ -1,0 +1,319 @@
+# ipbuilding_blueprint_version: 1
+blueprint:
+  name: IPBuilding wandknop — kort en lang
+  description: >
+    Two-phase control for an IPBuilding IP1100PoE wall switch. Use this
+    when a short press and a long press should drive different things.
+
+    Each phase has the same four inputs:
+      - action: what to do (`Geen`, `Aan`, `Uit`, `Toggle`, `Scene activeren`)
+      - target type: één entity of alle lampen in een ruimte
+      - target: de gekozen entity of ruimte
+      - (only for entity-target) extra domain-keuze
+
+    Use a separate `button_cover` blueprint for curtains (hold-to-move +
+    release-to-stop). Use `button_dim` for dimming while held. Use
+    `button_toggle` when only the short press is needed.
+  domain: automation
+  source_url: https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_standard.yaml
+
+  input:
+    common_section:
+      name: Algemeen
+      icon: mdi:cog-outline
+      input:
+        automation_name:
+          name: Naam automatisering
+          description: >
+            Gebruik de weergavenaam van de knop, bv.
+            "Keuken wandknop → Keuken LED". De entity_id
+            `event.<hardware_id>` is bewust niet leesbaar.
+          default: ""
+          selector:
+            text:
+
+        button_entity:
+          name: Knop
+          description: >
+            De IPBuilding event-entity van de fysieke wandknop
+            (bv. `event.2f8185190000df`). De entity moet ingeschakeld
+            zijn in Instellingen → Apparaten & entiteiten.
+          selector:
+            entity:
+              filter:
+                - domain: event
+                  integration: ipbuilding_gateway_ha
+
+        automation_area:
+          name: Ruimte
+          description: >
+            Ruimte voor de automatisering. De companion zet de `room` uit
+            devices.json als `suggested_area` op het knop-device; kies
+            hier dezelfde ruimte zodat de automatisering in de Lovelace-ruimte
+            verschijnt.
+          default: ""
+          selector:
+            area:
+
+    press_section:
+      name: Korte druk
+      icon: mdi:gesture-tap-button
+      input:
+        press_action:
+          name: Actie
+          description: Wat de automatisering op een korte druk doet.
+          default: toggle
+          selector:
+            select:
+              options:
+                - label: Geen (alleen reageren op lang indrukken)
+                  value: none
+                - label: Aan
+                  value: on
+                - label: Uit
+                  value: off
+                - label: Toggle
+                  value: toggle
+                - label: Scene activeren
+                  value: activate_scene
+
+        press_target_kind:
+          name: Doeltype
+          description: >
+            Eén entity (lamp, schakelaar, scene) of alle lampen in een ruimte.
+            Bij "Scene activeren" moet het doeltype "Eén entity" zijn.
+          default: entity
+          selector:
+            select:
+              options:
+                - label: Eén entity
+                  value: entity
+                - label: Alle lampen in een ruimte
+                  value: area
+
+        press_entity_target:
+          name: Entity
+          description: >
+            Lamp, schakelaar of scene. Verplicht bij doeltype "Eén entity".
+          default: ""
+          selector:
+            target:
+              entity:
+                domain:
+                  - light
+                  - switch
+                  - scene
+
+        press_area:
+          name: Ruimte
+          description: >
+            Alle lampen in deze ruimte. Verplicht bij doeltype "Alle lampen
+            in een ruimte".
+          default: ""
+          selector:
+            area:
+
+    long_press_section:
+      name: Lang indrukken (optioneel)
+      icon: mdi:gesture-two-tap-button
+      collapsed: true
+      input:
+        long_press_action:
+          name: Actie
+          description: >
+            Wat de automatisering doet zodra de knop langer dan de hold-drempel
+            (gateway-side, standaard 1,5 s) wordt vastgehouden.
+          default: none
+          selector:
+            select:
+              options:
+                - label: Geen
+                  value: none
+                - label: Aan
+                  value: on
+                - label: Uit
+                  value: off
+                - label: Toggle
+                  value: toggle
+                - label: Scene activeren
+                  value: activate_scene
+
+        long_press_target_kind:
+          name: Doeltype
+          default: entity
+          selector:
+            select:
+              options:
+                - label: Eén entity
+                  value: entity
+                - label: Alle lampen in een ruimte
+                  value: area
+
+        long_press_entity_target:
+          name: Entity
+          default: ""
+          selector:
+            target:
+              entity:
+                domain:
+                  - light
+                  - switch
+                  - scene
+
+        long_press_area:
+          name: Ruimte
+          default: ""
+          selector:
+            area:
+
+alias: !input automation_name
+area_id: !input automation_area
+mode: single
+
+variables:
+  press_action: !input press_action
+  press_target_kind: !input press_target_kind
+  press_entity_target: !input press_entity_target
+  press_area: !input press_area
+  long_press_action: !input long_press_action
+  long_press_target_kind: !input long_press_target_kind
+  long_press_entity_target: !input long_press_entity_target
+  long_press_area: !input long_press_area
+
+trigger:
+  - platform: state
+    entity_id: !input button_entity
+    to: "press"
+    id: press
+  - platform: state
+    entity_id: !input button_entity
+    to: "long_press"
+    id: long_press
+
+action:
+  - choose:
+      # Press + entity-target, normalise action.
+      - conditions:
+          - condition: trigger
+            id: press
+          - condition: template
+            value_template: "{{ press_action != 'none' and press_target_kind == 'entity' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'on' }}"
+                sequence:
+                  - action: homeassistant.turn_on
+                    target: !input press_entity_target
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'off' }}"
+                sequence:
+                  - action: homeassistant.turn_off
+                    target: !input press_entity_target
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'toggle' }}"
+                sequence:
+                  - action: homeassistant.toggle
+                    target: !input press_entity_target
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'activate_scene' }}"
+                sequence:
+                  - action: scene.turn_on
+                    target: !input press_entity_target
+
+      # Press + area-target. Only light services have meaningful area_ids.
+      - conditions:
+          - condition: trigger
+            id: press
+          - condition: template
+            value_template: "{{ press_action != 'none' and press_target_kind == 'area' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'on' }}"
+                sequence:
+                  - action: light.turn_on
+                    target:
+                      area_id: !input press_area
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'off' }}"
+                sequence:
+                  - action: light.turn_off
+                    target:
+                      area_id: !input press_area
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'toggle' }}"
+                sequence:
+                  - action: light.toggle
+                    target:
+                      area_id: !input press_area
+
+      # Long press + entity-target.
+      - conditions:
+          - condition: trigger
+            id: long_press
+          - condition: template
+            value_template: "{{ long_press_action != 'none' and long_press_target_kind == 'entity' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ long_press_action == 'on' }}"
+                sequence:
+                  - action: homeassistant.turn_on
+                    target: !input long_press_entity_target
+              - conditions:
+                  - condition: template
+                    value_template: "{{ long_press_action == 'off' }}"
+                sequence:
+                  - action: homeassistant.turn_off
+                    target: !input long_press_entity_target
+              - conditions:
+                  - condition: template
+                    value_template: "{{ long_press_action == 'toggle' }}"
+                sequence:
+                  - action: homeassistant.toggle
+                    target: !input long_press_entity_target
+              - conditions:
+                  - condition: template
+                    value_template: "{{ long_press_action == 'activate_scene' }}"
+                sequence:
+                  - action: scene.turn_on
+                    target: !input long_press_entity_target
+
+      # Long press + area-target.
+      - conditions:
+          - condition: trigger
+            id: long_press
+          - condition: template
+            value_template: "{{ long_press_action != 'none' and long_press_target_kind == 'area' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ long_press_action == 'on' }}"
+                sequence:
+                  - action: light.turn_on
+                    target:
+                      area_id: !input long_press_area
+              - conditions:
+                  - condition: template
+                    value_template: "{{ long_press_action == 'off' }}"
+                sequence:
+                  - action: light.turn_off
+                    target:
+                      area_id: !input long_press_area
+              - conditions:
+                  - condition: template
+                    value_template: "{{ long_press_action == 'toggle' }}"
+                sequence:
+                  - action: light.toggle
+                    target:
+                      area_id: !input long_press_area

@@ -25,6 +25,20 @@ anders meldt.
 
 ## [Unreleased]
 
+## [0.4.0-rc.6] - 2026-06-18
+
+### Added
+- **Blueprint-set voor IP1100PoE-knoppen** — vier doelgerichte blueprints in `custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/`: `button_toggle` (korte druk → toggle), `button_standard` (kort + optioneel lang, met on / off / toggle / scene voor entity of alle lampen in een ruimte), `button_dim` (toggle + dim tijdens hold, vervangt `dim_button.yaml`) en `button_cover` (hold = open of close, release = stop).
+- **Versioned blueprint-sync** — elke packaged blueprint heeft een `# ipbuilding_blueprint_version: N` header. De companion overschrijft bestaande blueprints op HA wanneer de package-versie hoger is. Bestanden met een `# user_modified: true` marker blijven onaangeraakt.
+
+### Fixed
+- **Dim-blueprint `max: 1` foutmelding** — `button_dim.yaml` gebruikt uitsluitend `mode: restart`; de ongeldige `max: 1` is verwijderd zodat `Message malformed: value must be at least 2 @ data['max']` niet meer optreedt bij het opslaan.
+- **Helper UX-tekst** — `button_dim.yaml` legt nu het verschil uit tussen de **Naam** (mag spaties) en de **Entity ID** (alleen `a-z`, `0-9`, underscores) van de `input_boolean` direction helper.
+- **Device-trigger lekt niet meer over andere knoppen** — `async_attach_trigger` in `device_trigger.py` viel terug op een lege `event_data` filter wanneer de hardware-id niet gevonden kon worden. Een lege filter matcht *iedere* `ipbuilding_gateway_ha.button_*`-event, waardoor een automatisering op één knop kon afgaan op een fysieke druk op een andere. De handler faalt nu hard met een `ValueError` wanneer de hardware-id ontbreekt; regressie-guard in `tests/test_device_trigger.py`.
+
+### Deprecated
+- **`dim_button.yaml`** is vervangen door `button_dim.yaml` en blijft alleen als stub bestaan. De stub vuurt een `persistent_notification` af zodra een bestaande automatisering hem nog gebruikt. Migreer door een nieuwe automatisering vanuit `button_dim.yaml` te maken en de oude uit te zetten.
+
 ## [0.4.0-rc.5] - 2026-06-18
 
 ### Fixed

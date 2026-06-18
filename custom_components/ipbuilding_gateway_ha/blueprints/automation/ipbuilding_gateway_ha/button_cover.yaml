@@ -1,0 +1,211 @@
+# ipbuilding_blueprint_version: 1
+blueprint:
+  name: IPBuilding wandknop — gordijn
+  description: >
+    Hold-to-move / release-to-stop pattern for any Home Assistant
+    `cover` entity (gordijn, screen, rolluik, markies) driven by an
+    IPBuilding IP1100PoE wall button.
+
+    Standard pattern:
+      - hold = open (or close) the cover;
+      - release = stop;
+      - short press = nothing (the operator can also choose toggle /
+        open / close here if a short tap should pre-position the cover).
+
+    `release` fires on every button-up, including after a short press.
+    Configure the short-press action to `Geen` if a short tap should
+    only count as "stopped moving" — leaving the cover where it is.
+
+    For plain on/off/toggle use `button_standard` instead.
+  domain: automation
+  source_url: https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_cover.yaml
+
+  input:
+    common_section:
+      name: Algemeen
+      icon: mdi:cog-outline
+      input:
+        automation_name:
+          name: Naam automatisering
+          description: >
+            Gebruik de weergavenaam van de knop, bv.
+            "Woonkamer wandknop → Gordijn".
+          default: ""
+          selector:
+            text:
+
+        button_entity:
+          name: Knop
+          description: >
+            De IPBuilding event-entity van de fysieke wandknop
+            (bv. `event.2f8185190000df`).
+          selector:
+            entity:
+              filter:
+                - domain: event
+                  integration: ipbuilding_gateway_ha
+
+        automation_area:
+          name: Ruimte
+          description: >
+            Ruimte voor de automatisering. Volgt de `room` uit
+            devices.json / `suggested_area` op het knop-device.
+          default: ""
+          selector:
+            area:
+
+        cover_entity:
+          name: Gordijn
+          description: >
+            De `cover` entity die wordt aangestuurd. Verplicht.
+          selector:
+            entity:
+              filter:
+                - domain: cover
+
+    hold_section:
+      name: Vasthouden
+      icon: mdi:gesture-two-tap-button
+      input:
+        hold_direction:
+          name: Richting tijdens vasthouden
+          description: >
+            Welke kant het gordijn op beweegt zolang de knop wordt
+            vastgehouden.
+          default: open
+          selector:
+            select:
+              options:
+                - label: Openen
+                  value: open
+                - label: Sluiten
+                  value: close
+
+    release_section:
+      name: Loslaten
+      icon: mdi:stop
+      input:
+        release_action:
+          name: Actie bij loslaten
+          description: >
+            Vuurt op elke loslating, ook na een korte tik. Standaard
+            stopt het gordijn zodra de knop wordt losgelaten.
+          default: stop
+          selector:
+            select:
+              options:
+                - label: Stoppen
+                  value: stop
+                - label: Geen
+                  value: none
+
+    press_section:
+      name: Korte druk (optioneel)
+      icon: mdi:gesture-tap-button
+      collapsed: true
+      input:
+        press_action:
+          name: Actie op korte druk
+          description: >
+            Optionele actie bij een korte tik. Laat op "Geen" staan als
+            een korte tik niets hoeft te doen (het gordijn stopt dan
+            sowieso bij release, maar beweegt niet).
+          default: none
+          selector:
+            select:
+              options:
+                - label: Geen
+                  value: none
+                - label: Openen
+                  value: open
+                - label: Sluiten
+                  value: close
+                - label: Toggle
+                  value: toggle
+
+alias: !input automation_name
+area_id: !input automation_area
+mode: single
+
+variables:
+  hold_direction: !input hold_direction
+  release_action: !input release_action
+  press_action: !input press_action
+
+trigger:
+  - platform: state
+    entity_id: !input button_entity
+    to: "press"
+    id: press
+  - platform: state
+    entity_id: !input button_entity
+    to: "long_press"
+    id: long_press
+  - platform: state
+    entity_id: !input button_entity
+    to: "release"
+    id: release
+
+action:
+  - choose:
+      # Short press — optional.
+      - conditions:
+          - condition: trigger
+            id: press
+          - condition: template
+            value_template: "{{ press_action != 'none' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'open' }}"
+                sequence:
+                  - action: cover.open_cover
+                    target:
+                      entity_id: !input cover_entity
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'close' }}"
+                sequence:
+                  - action: cover.close_cover
+                    target:
+                      entity_id: !input cover_entity
+              - conditions:
+                  - condition: template
+                    value_template: "{{ press_action == 'toggle' }}"
+                sequence:
+                  - action: cover.toggle
+                    target:
+                      entity_id: !input cover_entity
+
+      # Hold — move the cover in the configured direction.
+      - conditions:
+          - condition: trigger
+            id: long_press
+          - condition: template
+            value_template: "{{ hold_direction == 'open' }}"
+        sequence:
+          - action: cover.open_cover
+            target:
+              entity_id: !input cover_entity
+
+      - conditions:
+          - condition: trigger
+            id: long_press
+          - condition: template
+            value_template: "{{ hold_direction == 'close' }}"
+        sequence:
+          - action: cover.close_cover
+            target:
+              entity_id: !input cover_entity
+
+      # Release — stop by default.
+      - conditions:
+          - condition: trigger
+            id: release
+          - condition: template
+            value_template: "{{ release_action == 'stop' }}"
+        sequence:
+          - action: cover.stop_cover
+            target:
+              entity_id: !input cover_entity
