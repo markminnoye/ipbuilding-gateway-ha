@@ -70,9 +70,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     bootstrap_done = hass.data[DOMAIN].get(f"{entry.entry_id}_bootstrap_done")
     if not bootstrap_done and not coordinator.devices_snapshot():
         hass.data[DOMAIN][f"{entry.entry_id}_bootstrap_done"] = True
-        entry.async_on_unload(
-            hass.async_create_task(_bootstrap_devices(hass, entry.entry_id))
+        # ``async_on_unload`` takes a *callable* to run on unload, not a Task —
+        # registering the Task itself made HA call it (``Task() ``) on unload and
+        # raise "'_asyncio.Task' object is not callable". Register the task's
+        # ``cancel`` so an in-flight bootstrap is cancelled cleanly on unload.
+        bootstrap_task = hass.async_create_task(
+            _bootstrap_devices(hass, entry.entry_id)
         )
+        entry.async_on_unload(bootstrap_task.cancel)
     # Apply the choices the coupling wizard collected (room→area mapping is
     # idempotent — it never overwrites a user-set area). The wizard now runs
     # inside the config flow, so there is no auto-launched options flow here.
