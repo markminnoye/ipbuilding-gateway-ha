@@ -27,6 +27,7 @@ anders meldt.
 
 ### Added
 - **Onboarding wizard (Sprint 1):** na eerste installatie opent een setup-wizard (overslaan mogelijk) met veldbus discovery sweep (visuele voortgang + resultaat), ruimte→HA-area mapping, en herstart via integratie-opties.
+- **Button mapping wizard stap (Sprint 2):** leest `getButtons` van de inputmodule(s) en stelt per knop een doel-entity (light/switch) voor. Genereert per `func1`/`func2`/`release` een HA automation met native device-trigger, standaard uitgeschakeld. `allOn`/`allOff` worden als module-scope groep geëmiteerd. Numerieke `outType` waarden (0/1/160/255) uit de IPBox autonomy-formaat worden genormaliseerd.
 - IP1100PoE-knoppen zijn standaard **ingeschakeld** in de entity registry (gateway stuurt geen `active: false` meer); inactieve relay/dimmer-kanalen (`active: false` in `devices.json`) blijven disabled+hidden.
 
 ## [1.0.0] - 2026-06-18

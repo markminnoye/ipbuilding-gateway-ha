@@ -139,6 +139,26 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._data = {d["id"]: d for d in devices if d.get("id")}
         return self._data
 
+    async def async_fetch_button_config(self) -> list[dict[str, Any]]:
+        """Fetch ``getButtons`` for all input modules via ``GET /api/v1/modules``.
+
+        Returns a flat list combining the per-module ``buttons[]`` arrays
+        in MAC-keyed module order. Modules without ``buttons`` (relay
+        / dimmer) are skipped.
+        """
+        modules = await self.async_fetch_modules()
+        out: list[dict[str, Any]] = []
+        for module in modules.values():
+            if module.get("type") != "input":
+                continue
+            buttons = module.get("buttons") or []
+            for btn in buttons:
+                enriched = dict(btn)
+                enriched["module_id"] = module.get("id")
+                enriched["module_ip"] = module.get("ip")
+                out.append(enriched)
+        return out
+
     async def async_fetch_modules(self) -> dict[str, dict[str, Any]]:
         """Poll GET /api/v1/modules and cache the result keyed by MAC.
 

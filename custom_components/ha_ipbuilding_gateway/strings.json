@@ -38,7 +38,22 @@
       },
       "onboarding_done": {
         "title": "Setup complete",
-        "description": "Discovery added {added} module(s). {room_count} room(s) mapped. Button-to-action mapping will be available in a future release. You can re-run this wizard from integration options."
+        "description": "Discovery added {added} module(s). {room_count} room(s) mapped. {button_count} button(s) imported. You can re-run this wizard from integration options."
+      },
+      "onboarding_modules_refresh": {
+        "title": "Reading button configuration",
+        "description": "Reading getButtons from the IP1100PoE module(s)…"
+      },
+      "onboarding_buttons_overview": {
+        "title": "Button configuration found",
+        "description": "Detected {button_count} physical button(s); {actionable_count} have actions configured. Warnings: {warning_count}. Continue to choose targets."
+      },
+      "onboarding_buttons_review": {
+        "title": "Choose button targets",
+        "description": "Pick a light or switch for each configured button. Leave empty to skip an action. The wizard will create one automation per slot, default off.",
+        "data": {
+          "target_0": "Target for {label_0}"
+        }
       }
     },
     "error": {

@@ -35,7 +35,19 @@
       },
       "onboarding_done": {
         "title": "Instellen voltooid",
-        "description": "Discovery voegde {added} module(s) toe. {room_count} ruimte(n) gekoppeld. Knop→actie-mapping volgt in een latere release. Je kunt deze wizard opnieuw starten via integratie-opties."
+        "description": "Discovery voegde {added} module(s) toe. {room_count} ruimte(n) gekoppeld. {button_count} knop(pen) geïmporteerd. Je kunt deze wizard opnieuw starten via integratie-opties."
+      },
+      "onboarding_modules_refresh": {
+        "title": "Knopconfiguratie ophalen",
+        "description": "getButtons ophalen van de IP1100PoE module(s)…"
+      },
+      "onboarding_buttons_overview": {
+        "title": "Knopconfiguratie gevonden",
+        "description": "{button_count} fysieke knop(pen) gevonden; {actionable_count} met actie(s). Waarschuwingen: {warning_count}. Ga verder om doelen te kiezen."
+      },
+      "onboarding_buttons_review": {
+        "title": "Doelen kiezen voor knoppen",
+        "description": "Kies een licht of schakelaar voor elke geconfigureerde knop. Leeg laten slaat die actie over. De wizard maakt per slot één automatisering, standaard uit."
       }
     },
     "error": {
