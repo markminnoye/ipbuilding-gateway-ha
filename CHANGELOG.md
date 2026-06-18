@@ -25,18 +25,15 @@ anders meldt.
 
 ## [Unreleased]
 
-### Removed
-- **Debug switch om gateway veld-bus polling te togglen.** De `Fieldbus polling (debug)` entity en de bijbehorende `coordinator.async_set_fieldbus_polling` / `fieldbus_polling_enabled` helpers zijn verwijderd. De gateway-side `POST /api/v1/debug/fieldbus-polling` endpoint is eveneens verwijderd (zie [`IPBuilding-Gateway` v0.4.3](../../IPBuilding-Gateway/blob/main/ipbuilding_gateway/CHANGELOG.md)).
-
-## [0.4.2] - 2026-06-18
-
-### Added
-- **Debug switch to disable the gateway's field-bus polling loop.** A new switch `Fieldbus polling (debug)` appears on the Tier-1 `IPBuilding Gateway` device. The entity is **disabled by default in the entity registry** — enable it from **Settings → Entities** only when you suspect hub polling interferes with input events or switch behaviour. Switching it off stops the gateway's UDP/1001 keep-alive poll loop; the gateway status goes to `degraded` with a clear warning, and the gateway log explicitly notes that input events will likely be sent to the IPBox instead. Switches, dimmers and on-demand `send_command` keep working. **Requires add-on v0.4.2+** (adds the matching `POST /api/v1/debug/fieldbus-polling` endpoint). With an older gateway the switch logs an error and the gateway stays `degraded`.
-
-## [0.4.1] - 2026-06-18
+## [0.4.0-rc.5] - 2026-06-18
 
 ### Fixed
+- **hassfest:** `automation` en `blueprint` toegevoegd aan `manifest.json` `dependencies` (vereist voor packaged blueprint-installatie).
 - **Manual config flow pre-fills the host with `127.0.0.1`** — the Supervisor add-on contract. Operators adding the integration by hand used to see an empty host field; the loopback hint now matches the HassIO discovery flow, so a fresh add-on install confirms out of the box. Standalone installs (Docker, Pi, remote) can still override the value.
+- **discovery_completed + bootstrap one-shot** — robuuster afhandelen van discovery-events en eerste REST-bootstrap.
+
+### Removed
+- **Debug switch om gateway veld-bus polling te togglen.** De `Fieldbus polling (debug)` entity en de bijbehorende coordinator-helpers zijn verwijderd. De gateway-side `POST /api/v1/debug/fieldbus-polling` endpoint is eveneens verwijderd (zie [`IPBuilding-Gateway` v0.4.3](../../IPBuilding-Gateway/blob/main/ipbuilding_gateway/CHANGELOG.md)).
 
 ## [0.4.0] - 2026-06-17
 
