@@ -1,4 +1,4 @@
-# ipbuilding_blueprint_version: 2
+# ipbuilding_blueprint_version: 3
 blueprint:
   name: IPBuilding wandknop — toggle
   description: >
@@ -10,9 +10,6 @@ blueprint:
       - `button_standard` — short/long press with on/off/toggle/scene
       - `button_dim` — toggle + dim while held
       - `button_cover` — hold-to-move / release-to-stop for curtains
-
-    The automation area is asked by Home Assistant in the popup that
-    appears after you press "Opslaan" — it is not a blueprint input.
   domain: automation
   source_url: https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_toggle.yaml
 

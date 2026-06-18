@@ -1,22 +1,33 @@
-# ipbuilding_blueprint_version: 1
+# ipbuilding_blueprint_version: 2
 blueprint:
-  name: IPBuilding wandknop — gordijn
+  name: "[Voorbeeld] IPBuilding wandknop — gordijn"
   description: >
-    Hold-to-move / release-to-stop pattern for any Home Assistant
-    `cover` entity (gordijn, screen, rolluik, markies) driven by an
-    IPBuilding IP1100PoE wall button.
+    **Dit is een voorbeeld-blueprint** — niet productie-klaar. De
+    Companion-ontwikkelaars hebben geen `cover` hardware om dit te
+    testen; de blueprint is naar beste weten opgebouwd uit de
+    IPBuilding-specificatie en de Home Assistant `cover`-services,
+    maar nog niet gevalideerd op een fysiek gordijn.
 
-    Standard pattern:
-      - hold = open (or close) the cover;
+    Hold-to-move / release-to-stop pattern voor een Home Assistant
+    `cover` entity (gordijn, screen, rolluik, markies) aangestuurd
+    door een IPBuilding IP1100PoE wandknop.
+
+    Standaardpatroon:
+      - hold = open (of close) het gordijn;
       - release = stop;
-      - short press = nothing (the operator can also choose toggle /
-        open / close here if a short tap should pre-position the cover).
+      - korte druk = niets (of toggle / open / close als een korte tik
+        het gordijn moet positioneren).
 
-    `release` fires on every button-up, including after a short press.
-    Configure the short-press action to `Geen` if a short tap should
-    only count as "stopped moving" — leaving the cover where it is.
+    `release` vuurt bij elke loslating, ook na een korte druk.
+    Kies "Geen" bij korte druk als een tik alleen als "stoppen" moet
+    gelden — het gordijn blijft dan waar het is.
 
-    For plain on/off/toggle use `button_standard` instead.
+    Voor simpele aan/uit/toggle: gebruik `button_standard`.
+    Voor gedimde verlichting: gebruik `button_dim`.
+
+    Bugs / verbeteringen graag melden via
+    https://github.com/markminnoye/ipbuilding-gateway-ha/issues met
+    label `cover-blueprint`.
   domain: automation
   source_url: https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_cover.yaml
 

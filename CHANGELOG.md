@@ -25,6 +25,13 @@ anders meldt.
 
 ## [Unreleased]
 
+## [0.4.0-rc.9] - 2026-06-18
+
+### Notes
+- **`button_cover.yaml` is een voorbeeld** — de blueprint-naam begint nu met `[Voorbeeld]` en de description legt uit dat de companion-ontwikkelaars geen `cover`-hardware hebben om dit te valideren. Bugs graag melden via GitHub Issues met label `cover-blueprint`.
+- **`button_toggle.yaml`** — de zin "The automation area is asked by Home Assistant in the popup that appears after you press 'Opslaan' — it is not a blueprint input" is verwijderd uit de description om dubbele uitleg te vermijden.
+- **HA-frontend rename-popup** — Home Assistant opent altijd een "hernoem"-popup bij het aanmaken van een nieuwe automation, ook vanuit een blueprint. De popup vult de **blueprint-name** als default in (bv. "IPBuilding wandknop — toggle"), niet de `automation_name` uit de blueprint. De `alias: !input automation_name` wordt wel correct in de opgeslagen YAML gezet; pas in de popup de naam aan vóór je bevestigt als je de blueprint-naam niet wilt.
+
 ## [0.4.0-rc.8] - 2026-06-18
 
 ### Changed
