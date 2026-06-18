@@ -25,6 +25,11 @@ anders meldt.
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-06-18
+
+### Fixed
+- **Correcte lichtstatus direct na een herstart.** Vóór deze versie zette de companion elk kanaal waarvan de gateway (nog) geen echte aan/uit-stand had doorgegeven op "uit" — inclusief relay-kanalen die alleen nog op hun eerste UDP-commando wachtten, en dimmer-kanalen die nog geen level-reply teruggestuurd hadden. Een verse herstart van de gateway of de companion zag er daardoor uit als "alles uit", ook al brandden er lampen. De companion mapt nu "unknown" en "inactive" netjes op een onbekende staat in Home Assistant, zodat HA "Onbekend" toont in plaats van "uit" tot de gateway de eerste echte status levert. Werkt samen met [IPBuilding Gateway v0.4.3](https://github.com/markminnoye/IPBuilding-Gateway/releases/tag/v0.4.3), die de live kanaalstatus bij het opstarten ophaalt zodat de eerste snapshot direct klopt.
+
 ## [0.4.0-rc.11] - 2026-06-18
 
 ### Changed

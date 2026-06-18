@@ -68,7 +68,17 @@ class IPBuildingSwitch(SwitchEntity):
 
     def _update_from_state(self, state: dict) -> None:
         """Update entity state from a gateway state_changed message."""
-        self._attr_is_on = state.get("state") in ("on", "ON")
+        raw = state.get("state")
+        # Map gateway state to HA: anything other than a real on/off
+        # must surface as None so HA shows "Unknown" instead of
+        # silently turning the switch off. The gateway returns
+        # "unknown" right after a restart before the HTTP
+        # ``statuses`` hydration lands, and "inactive" for channels
+        # disabled in devices.json.
+        if raw in (None, "unknown", "inactive"):
+            self._attr_is_on = None
+        else:
+            self._attr_is_on = raw in ("on", "ON")
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""

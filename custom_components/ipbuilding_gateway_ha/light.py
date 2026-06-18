@@ -89,8 +89,17 @@ class IPBuildingLight(LightEntity):
 
     def _update_from_state(self, state: dict) -> None:
         """Update entity state from a gateway state_changed message."""
-        is_on = state.get("state") in ("on", "ON")
-        self._attr_is_on = is_on
+        raw = state.get("state")
+        # Map gateway state to HA: anything other than a real on/off
+        # must surface as None so HA shows "Unknown" instead of
+        # silently turning the light off. The gateway returns
+        # "unknown" right after a restart before the HTTP
+        # ``statuses`` hydration lands, and "inactive" for channels
+        # disabled in devices.json.
+        if raw in (None, "unknown", "inactive"):
+            self._attr_is_on = None
+        else:
+            self._attr_is_on = raw in ("on", "ON")
 
         # Dimmer-specific: extract brightness level when the device is a dimmer module.
         if self._is_dimmer and "level" in state:
