@@ -37,18 +37,18 @@ if "homeassistant" not in sys.modules:
     sys.modules["homeassistant.const"] = _ha_const
 
 _REPO = Path(__file__).resolve().parents[1]
-_COMP_DIR = _REPO / "custom_components" / "ipbuilding_gateway_ha"
+_COMP_DIR = _REPO / "custom_components" / "ha_ipbuilding_gateway"
 
 # Synthetic package so ``from .const import`` resolves.
-_fake_pkg = types.ModuleType("ipbuilding_gateway_ha")
+_fake_pkg = types.ModuleType("ha_ipbuilding_gateway")
 _fake_pkg.__path__ = [str(_COMP_DIR)]
-sys.modules["ipbuilding_gateway_ha"] = _fake_pkg
+sys.modules["ha_ipbuilding_gateway"] = _fake_pkg
 
 _const_spec = importlib.util.spec_from_file_location(
-    "ipbuilding_gateway_ha.const", _COMP_DIR / "const.py"
+    "ha_ipbuilding_gateway.const", _COMP_DIR / "const.py"
 )
 const_mod = importlib.util.module_from_spec(_const_spec)
-sys.modules["ipbuilding_gateway_ha.const"] = const_mod
+sys.modules["ha_ipbuilding_gateway.const"] = const_mod
 _const_spec.loader.exec_module(const_mod)  # type: ignore[union-attr]
 
 _coordinator_path = _COMP_DIR / "coordinator.py"

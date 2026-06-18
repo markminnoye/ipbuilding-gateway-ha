@@ -60,6 +60,22 @@ kept in lockstep — the two repos follow independent semver. A release of
 one does not require a release of the other. Breaking changes (if any)
 are called out in each `CHANGELOG.md` under a `### Breaking:` section.
 
+### Upgrading from a pre-1.0 install?
+
+This is a breaking release. The integration's Home Assistant domain changed from `ipbuilding_gateway_ha` to `ha_ipbuilding_gateway`, and bus event-types changed accordingly.
+
+Before updating:
+
+1. **Settings → Devices & Services → Integrations → IPBuilding Gateway HA** → ⋯ → Delete. Confirm when prompted.
+2. Update the integration in HACS (the repository is now `markminnoye/ha-ipbuilding-gateway`).
+3. Restart Home Assistant.
+4. Re-add the integration from the **Discovered** list (or manually). All entities re-appear with new IDs (`light.ha_ipbuilding_gateway_*`, `switch.ha_ipbuilding_gateway_*`, `event.ha_ipbuilding_gateway_*`, `sensor.ha_ipbuilding_gateway_*`).
+5. Move any custom blueprints from `config/blueprints/automation/ipbuilding_gateway_ha/` to `config/blueprints/automation/ha_ipbuilding_gateway/` (or recreate them in the UI).
+6. Update Lovelace cards, scripts, and automations that reference the old entity IDs or the old bus event-types (`ipbuilding_gateway_ha.button_*` → `ha_ipbuilding_gateway.button_*`).
+7. If you imported button mappings via `scripts/import_ipbox_to_ha.py` in the gateway repo, re-run it: the gateway script now writes the new event-types automatically.
+
+No data is lost in the gateway itself (`devices.json` is on the gateway filesystem, not in HA), and the gateway add-on's `discovery:` key is updated to match the new domain.
+
 ### 1. Gateway add-on (HA OS / Supervised)
 
 [![Add add-on repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2FIPBuilding-Gateway)
@@ -90,10 +106,10 @@ then search and download **IPBuilding Gateway HA**.
 
 ### Manual installation
 
-1. Copy the `custom_components/ipbuilding_gateway_ha` directory from this
+1. Copy the `custom_components/ha_ipbuilding_gateway` directory from this
    repository into your Home Assistant `config/custom_components` folder.
 
-   Final path: `config/custom_components/ipbuilding_gateway_ha`
+   Final path: `config/custom_components/ha_ipbuilding_gateway`
 
 2. Restart Home Assistant.
 
@@ -127,7 +143,7 @@ entry per gateway instance is allowed.
 
 A ready-to-paste Lovelace snippet for gateway status and the discovery-sweep
 button is in
-[`custom_components/ipbuilding_gateway_ha/dashboard.md`](custom_components/ipbuilding_gateway_ha/dashboard.md)
+[`custom_components/ha_ipbuilding_gateway/dashboard.md`](custom_components/ha_ipbuilding_gateway/dashboard.md)
 (includes optional HACS **button-card** notes).
 
 ## Button automations
@@ -135,7 +151,7 @@ button is in
 The companion does **not** ship automation blueprints to the operator's
 HA Blueprint picker as of `v0.4.0-rc.11`. The packaged blueprint files
 remain in this repository for reference and for the source-only tests:
-[`blueprints/automation/ipbuilding_gateway_ha/`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/).
+[`blueprints/automation/ha_ipbuilding_gateway/`](custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/).
 
 To wire an IP1100PoE physical button to a lamp, dimmer, cover, or
 scene, use one of the following paths.
@@ -220,12 +236,12 @@ actions:
 ```
 
 For backward compatibility, the integration also fires the bus event
-`ipbuilding_gateway_ha.button_pressed` with `{"hardware_id": "...", "action": "press"}`:
+`ha_ipbuilding_gateway.button_pressed` with `{"hardware_id": "...", "action": "press"}`:
 
 ```yaml
 trigger:
   - platform: event
-    event_type: ipbuilding_gateway_ha.button_pressed
+    event_type: ha_ipbuilding_gateway.button_pressed
     event_data:
       hardware_id: "2f8185190000df"
 ```
@@ -272,7 +288,7 @@ When reporting a bug, include:
 - Home Assistant version
 - Integration version (**Settings → Devices & Services → IPBuilding Gateway HA**)
 - Gateway add-on / standalone version (`GET /api/v1/status` → `version`)
-- Relevant logs (**Settings → System → Logs**, filter `ipbuilding_gateway_ha`)
+- Relevant logs (**Settings → System → Logs**, filter `ha_ipbuilding_gateway`)
 
 ## License
 

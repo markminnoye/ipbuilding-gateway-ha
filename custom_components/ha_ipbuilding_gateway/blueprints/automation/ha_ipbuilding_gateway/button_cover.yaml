@@ -29,7 +29,7 @@ blueprint:
     https://github.com/markminnoye/ha-ipbuilding-gateway/issues met
     label `cover-blueprint`.
   domain: automation
-  source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_cover.yaml
+  source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/button_cover.yaml
 
   input:
     common_section:
@@ -54,7 +54,7 @@ blueprint:
             entity:
               filter:
                 - domain: event
-                  integration: ipbuilding_gateway_ha
+                  integration: ha_ipbuilding_gateway
 
         automation_area:
           name: Ruimte

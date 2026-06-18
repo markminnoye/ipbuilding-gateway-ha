@@ -15,7 +15,7 @@ blueprint:
     DEPRECATED — use `button_dim.yaml` from the same companion instead.
     This stub is kept so existing automations that reference this path
     continue to load. The companion now ships a renamed and improved
-    blueprint under `ipbuilding_gateway_ha/button_dim.yaml` with:
+    blueprint under `ha_ipbuilding_gateway/button_dim.yaml` with:
       - fixed `max: 1` validation error;
       - Dutch label and helper UX (entity_id vs. name);
       - explicit automation name and area fields.
@@ -24,10 +24,10 @@ blueprint:
       1. Create a new automation from the `button_dim` blueprint.
       2. Re-enter the same button, light, and direction helper.
       3. Enable the new automation and disable this one.
-      4. Delete `ipbuilding_gateway_ha/dim_button.yaml` from your
+      4. Delete `ha_ipbuilding_gateway/dim_button.yaml` from your
          `config/blueprints/automation/` folder.
   domain: automation
-  source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_dim.yaml
+  source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/button_dim.yaml
 
   input:
     button_entity:
@@ -38,7 +38,7 @@ blueprint:
         entity:
           filter:
             - domain: event
-              integration: ipbuilding_gateway_ha
+              integration: ha_ipbuilding_gateway
 
     target_light:
       name: Lamp
@@ -103,5 +103,5 @@ action:
         companion v0.5.0 vervangen is door `button_dim.yaml`. Maak een
         nieuwe automatisering vanuit dat blueprint, zet deze uit en
         verwijder daarna het stub-bestand uit
-        `config/blueprints/automation/ipbuilding_gateway_ha/`.
+        `config/blueprints/automation/ha_ipbuilding_gateway/`.
       notification_id: "ipbuilding_dim_button_deprecated"

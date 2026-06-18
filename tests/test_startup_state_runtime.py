@@ -22,24 +22,24 @@ import pytest
 ha = pytest.importorskip("homeassistant")
 
 _REPO = Path(__file__).resolve().parents[1]
-_COMP_DIR = _REPO / "custom_components" / "ipbuilding_gateway_ha"
+_COMP_DIR = _REPO / "custom_components" / "ha_ipbuilding_gateway"
 
 
 def _load_companion_module(name: str):
-    """Load ``ipbuilding_gateway_ha.<name>`` and its minimal dependencies.
+    """Load ``ha_ipbuilding_gateway.<name>`` and its minimal dependencies.
 
     The companion imports a long HA chain; we stub just enough to satisfy
     the entity-class constructors used in these tests. Returns the
     requested module.
     """
-    if "ipbuilding_gateway_ha" not in sys.modules:
-        pkg = types.ModuleType("ipbuilding_gateway_ha")
+    if "ha_ipbuilding_gateway" not in sys.modules:
+        pkg = types.ModuleType("ha_ipbuilding_gateway")
         pkg.__path__ = [str(_COMP_DIR)]
-        sys.modules["ipbuilding_gateway_ha"] = pkg
+        sys.modules["ha_ipbuilding_gateway"] = pkg
 
     def _load(mod_name: str):
         spec = importlib.util.spec_from_file_location(
-            f"ipbuilding_gateway_ha.{mod_name}", _COMP_DIR / f"{mod_name}.py"
+            f"ha_ipbuilding_gateway.{mod_name}", _COMP_DIR / f"{mod_name}.py"
         )
         mod = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = mod

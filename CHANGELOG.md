@@ -25,8 +25,15 @@ anders meldt.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-18
+
+### Breaking
+- **HA-domain hernoemd** van `ipbuilding_gateway_ha` naar `ha_ipbuilding_gateway`. Dit is een **breaking change** voor bestaande HA-installaties. Verwijder de oude integratie uit Instellingen → Apparaten & Diensten, herinstalleer via HACS, en pas je Lovelace-cards, scripts en automations aan om de nieuwe entity-IDs te gebruiken (`light.ha_ipbuilding_gateway_*`, `switch.ha_ipbuilding_gateway_*`, `event.ha_ipbuilding_gateway_*`, `sensor.ha_ipbuilding_gateway_*`). De folder `config/blueprints/automation/ipbuilding_gateway_ha/` moet je zelf hernoemen naar `config/blueprints/automation/ha_ipbuilding_gateway/` (of de blueprints opnieuw aanmaken vanuit de UI). Geen data-verlies in `devices.json` (gateway-kant). Zie de [README migratie-sectie](README.md#upgrading-from-a-pre-10-install) voor de volledige stappen.
+- **Bus event-types** hernoemd: `ipbuilding_gateway_ha.button_pressed`, `.button_long_pressed`, `.button_released` → `ha_ipbuilding_gateway.button_pressed`, `.button_long_pressed`, `.button_released`. HA Core events volgen automatisch omdat ze via `f"{DOMAIN}.{suffix}"` worden opgebouwd; eventuele hardcoded referenties in eigen automations moeten worden bijgewerkt.
+
 ### Changed
-- **Repository hernoemd** van `markminnoye/ipbuilding-gateway-ha` naar `markminnoye/ha-ipbuilding-gateway`. GitHub zet een 301-redirect in zodat bestaande clones, issues en HACS custom-repository URL's blijven werken. Geen impact op de integratie zelf, HA-domain (`ipbuilding_gateway_ha`), entity_id's of blueprints.
+- **Repository hernoemd** van `markminnoye/ipbuilding-gateway-ha` naar `markminnoye/ha-ipbuilding-gateway`. GitHub zet een 301-redirect in zodat bestaande clones, issues en HACS custom-repository URL's blijven werken. (Vorig release.)
+- **Eerste major release (1.0.0)** — markeert de eerste stabiele versie van de volledige field-bus hub + companion stack.
 
 ## [0.4.3] - 2026-06-18
 

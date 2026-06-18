@@ -3,7 +3,7 @@
 Exposes physical buttons on IP1100PoE modules as HA EventEntity
 instances. Each press/long_press/release from the gateway is routed to
 the matching ``event_type`` on the entity and to a typed bus event
-(``ipbuilding_gateway_ha.button_pressed`` / ``button_long_pressed`` /
+(``ha_ipbuilding_gateway.button_pressed`` / ``button_long_pressed`` /
 ``button_released``) so automations and blueprints can react to
 multi-stage button interactions.
 
@@ -54,9 +54,9 @@ class IPBuildingEventButton(EventEntity):
     """A hardware button exposed as a Home Assistant EventEntity.
 
     Fires the matching bus event for every action:
-    - ``ipbuilding_gateway_ha.button_pressed``
-    - ``ipbuilding_gateway_ha.button_long_pressed``
-    - ``ipbuilding_gateway_ha.button_released``
+    - ``ha_ipbuilding_gateway.button_pressed``
+    - ``ha_ipbuilding_gateway.button_long_pressed``
+    - ``ha_ipbuilding_gateway.button_released``
 
     All three carry ``{"hardware_id": "<id>", "action": "<press|long_press|release>"}``.
     """

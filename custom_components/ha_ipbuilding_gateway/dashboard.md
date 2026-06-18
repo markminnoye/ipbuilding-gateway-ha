@@ -174,4 +174,4 @@ custom-card-types geladen worden.
 
 - Bevestig dat `manifest.json` `version: 0.1.6` of hoger toont
 - Herstart HA, en herlaad de integratie (Instellingen → Apparaten & diensten → IPBuilding Gateway → ⋯ → Herladen)
-- Wis eventueel `custom_components/ipbuilding_gateway_ha/__pycache__/`
+- Wis eventueel `custom_components/ha_ipbuilding_gateway/__pycache__/`

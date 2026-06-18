@@ -18,7 +18,7 @@ blueprint:
     confirming. After saving, the automation appears in the list under
     that name.
   domain: automation
-  source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_toggle.yaml
+  source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/button_toggle.yaml
 
   input:
     button_entity:
@@ -31,7 +31,7 @@ blueprint:
         entity:
           filter:
             - domain: event
-              integration: ipbuilding_gateway_ha
+              integration: ha_ipbuilding_gateway
 
     target_entity:
       name: Lamp of schakelaar

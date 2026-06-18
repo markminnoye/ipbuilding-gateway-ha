@@ -21,11 +21,11 @@ import pytest
 
 ha = pytest.importorskip("homeassistant")
 
-from custom_components.ipbuilding_gateway_ha.blueprints import (  # noqa: E402
+from custom_components.ha_ipbuilding_gateway.blueprints import (  # noqa: E402
     async_install_packaged_blueprints,
     invalidate_packaged_blueprints_cache,
 )
-from custom_components.ipbuilding_gateway_ha.const import DOMAIN  # noqa: E402
+from custom_components.ha_ipbuilding_gateway.const import DOMAIN  # noqa: E402
 
 
 @pytest.mark.asyncio
@@ -41,10 +41,10 @@ async def test_install_packaged_blueprints_is_noop(tmp_path, caplog) -> None:
     source_root = (
         tmp_path
         / "custom_components"
-        / "ipbuilding_gateway_ha"
+        / "ha_ipbuilding_gateway"
         / "blueprints"
         / "automation"
-        / "ipbuilding_gateway_ha"
+        / "ha_ipbuilding_gateway"
     )
     source_root.mkdir(parents=True)
     (source_root / "button_dim.yaml").write_text(
@@ -52,14 +52,14 @@ async def test_install_packaged_blueprints_is_noop(tmp_path, caplog) -> None:
         "blueprint:\n  name: shipped\n  domain: automation\n"
     )
 
-    dest_root = tmp_path / "blueprints" / "automation" / "ipbuilding_gateway_ha"
+    dest_root = tmp_path / "blueprints" / "automation" / "ha_ipbuilding_gateway"
 
     hass = MagicMock()
     hass.data = {DOMAIN: {}}
     hass.config.path.side_effect = lambda *parts: str(tmp_path.joinpath(*parts))
 
     import logging
-    with caplog.at_level(logging.DEBUG, logger="custom_components.ipbuilding_gateway_ha.blueprints"):
+    with caplog.at_level(logging.DEBUG, logger="custom_components.ha_ipbuilding_gateway.blueprints"):
         await async_install_packaged_blueprints(hass)
 
     # The destination directory is NOT created; no files are written.

@@ -27,11 +27,11 @@ if "homeassistant" not in sys.modules:
 
 # Load the companion's discovery parser (which depends only on ``const``).
 _REPO = Path(__file__).resolve().parents[1]
-_COMP_DIR = _REPO / "custom_components" / "ipbuilding_gateway_ha"
+_COMP_DIR = _REPO / "custom_components" / "ha_ipbuilding_gateway"
 
 # Build a synthetic package so ``from .const import`` inside
 # discovery_parser resolves correctly.
-fake_pkg_name = "ipbuilding_gateway_ha"
+fake_pkg_name = "ha_ipbuilding_gateway"
 fake_pkg = types.ModuleType(fake_pkg_name)
 fake_pkg.__path__ = [str(_COMP_DIR)]
 sys.modules[fake_pkg_name] = fake_pkg

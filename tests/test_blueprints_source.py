@@ -19,10 +19,10 @@ _REPO = Path(__file__).resolve().parents[1]
 _BLUEPRINT_DIR = (
     _REPO
     / "custom_components"
-    / "ipbuilding_gateway_ha"
+    / "ha_ipbuilding_gateway"
     / "blueprints"
     / "automation"
-    / "ipbuilding_gateway_ha"
+    / "ha_ipbuilding_gateway"
 )
 
 _VERSION_HEADER_RE = re.compile(r"^\s*#\s*ipbuilding_blueprint_version:\s*(\d+)\s*$")

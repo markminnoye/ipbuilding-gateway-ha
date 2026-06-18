@@ -24,7 +24,7 @@ import pytest
 ha = pytest.importorskip("homeassistant")
 
 _REPO = Path(__file__).resolve().parents[1]
-_COMP_DIR = _REPO / "custom_components" / "ipbuilding_gateway_ha"
+_COMP_DIR = _REPO / "custom_components" / "ha_ipbuilding_gateway"
 
 
 @pytest.fixture
@@ -41,14 +41,14 @@ def event_module():
     matching source-level tests in ``test_event_entity_id.py`` still
     run in that case and catch the same regressions.
     """
-    if "ipbuilding_gateway_ha" not in sys.modules:
-        pkg = types.ModuleType("ipbuilding_gateway_ha")
+    if "ha_ipbuilding_gateway" not in sys.modules:
+        pkg = types.ModuleType("ha_ipbuilding_gateway")
         pkg.__path__ = [str(_COMP_DIR)]
-        sys.modules["ipbuilding_gateway_ha"] = pkg
+        sys.modules["ha_ipbuilding_gateway"] = pkg
 
     def _load(name: str):
         spec = importlib.util.spec_from_file_location(
-            f"ipbuilding_gateway_ha.{name}", _COMP_DIR / f"{name}.py"
+            f"ha_ipbuilding_gateway.{name}", _COMP_DIR / f"{name}.py"
         )
         mod = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = mod

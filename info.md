@@ -44,7 +44,7 @@ IPBuilding veldbus (UDP/1001)
         └── REST /api/v1/  (product northbound)
               │
               ▼
-        ipbuilding-gateway-ha (deze component)
+        ha-ipbuilding-gateway (deze component)
               ├── WebSocket-client (coordinator)
               └── HA entities:
                     ├── light      (relay ONOFF + dimmer BRIGHTNESS)
@@ -64,7 +64,7 @@ Bijv. "10.10.1.30:relay:0"
 
 Knop events van de IP1100PoE verschijnen als HA events:
 
-- Event type: `ipbuilding_gateway_ha.button_pressed`
+- Event type: `ha_ipbuilding_gateway.button_pressed`
 - Data: `{"hardware_id": "2DE341851900001F", "action": "press"}`
 
 Gebruik in automations:
@@ -72,7 +72,7 @@ Gebruik in automations:
 ```yaml
 trigger:
   - platform: event
-    event_type: ipbuilding_gateway_ha.button_pressed
+    event_type: ha_ipbuilding_gateway.button_pressed
     event_data:
       hardware_id: "2DE341851900001F"
 ```

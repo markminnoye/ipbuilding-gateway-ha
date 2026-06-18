@@ -25,13 +25,13 @@ Een duidelijke en beknopte beschrijving van wat je verwachtte.
 
 ## Screenshots / logs
 
-Plak hier eventueel relevante logs uit `home-assistant.log` (filter op `ipbuilding_gateway_ha`).
+Plak hier eventueel relevante logs uit `home-assistant.log` (filter op `ha_ipbuilding_gateway`).
 
 ## Omgeving
 
 - Home Assistant versie:
 - IPBuilding Gateway add-on versie (of standalone Docker image tag):
-- Companion versie (`/config/custom_components/ipbuilding_gateway_ha/manifest.json` → `version`):
+- Companion versie (`/config/custom_components/ha_ipbuilding_gateway/manifest.json` → `version`):
 - Module-types in je installatie (relay/dimmer/input):
 - Aantal entities in HA na installatie:
 

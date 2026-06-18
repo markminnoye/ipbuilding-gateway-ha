@@ -19,7 +19,7 @@ import re
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
-_COMP_DIR = _REPO / "custom_components" / "ipbuilding_gateway_ha"
+_COMP_DIR = _REPO / "custom_components" / "ha_ipbuilding_gateway"
 _LIGHT_SOURCE = (_COMP_DIR / "light.py").read_text()
 _SWITCH_SOURCE = (_COMP_DIR / "switch.py").read_text()
 

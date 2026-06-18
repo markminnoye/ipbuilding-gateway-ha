@@ -1,4 +1,4 @@
-"""Shared helpers for ipbuilding_gateway_ha entities.
+"""Shared helpers for ha_ipbuilding_gateway entities.
 
 Mirrors the HA-IPBuilding button pattern: channels (and IP1100PoE buttons)
 with ``active: false`` in the gateway snapshot are registered in Home

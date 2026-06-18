@@ -23,22 +23,22 @@ if "homeassistant" not in sys.modules:
     sys.modules["homeassistant.const"] = const_mod
 
 _REPO = Path(__file__).resolve().parents[1]
-_COMP_DIR = _REPO / "custom_components" / "ipbuilding_gateway_ha"
+_COMP_DIR = _REPO / "custom_components" / "ha_ipbuilding_gateway"
 
 # Build a synthetic package so ``from .const import`` resolves.
-_fake_pkg = types.ModuleType("ipbuilding_gateway_ha")
+_fake_pkg = types.ModuleType("ha_ipbuilding_gateway")
 _fake_pkg.__path__ = [str(_COMP_DIR)]
-sys.modules["ipbuilding_gateway_ha"] = _fake_pkg
+sys.modules["ha_ipbuilding_gateway"] = _fake_pkg
 
 for _name in ("const", "entity"):
     _spec = importlib.util.spec_from_file_location(
-        f"ipbuilding_gateway_ha.{_name}", _COMP_DIR / f"{_name}.py"
+        f"ha_ipbuilding_gateway.{_name}", _COMP_DIR / f"{_name}.py"
     )
     _module = importlib.util.module_from_spec(_spec)
     sys.modules[_spec.name] = _module
     _spec.loader.exec_module(_module)  # type: ignore[union-attr]
 
-entity_mod = sys.modules["ipbuilding_gateway_ha.entity"]
+entity_mod = sys.modules["ha_ipbuilding_gateway.entity"]
 
 
 def test_module_device_name_ip_placeholder_falls_back_to_role():

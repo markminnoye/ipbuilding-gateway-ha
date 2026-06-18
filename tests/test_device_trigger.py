@@ -15,7 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
-_COMP_DIR = _REPO / "custom_components" / "ipbuilding_gateway_ha"
+_COMP_DIR = _REPO / "custom_components" / "ha_ipbuilding_gateway"
 _TRIGGER_SOURCE = (_COMP_DIR / "device_trigger.py").read_text()
 
 

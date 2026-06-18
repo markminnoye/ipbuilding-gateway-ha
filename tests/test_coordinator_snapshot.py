@@ -92,26 +92,26 @@ _ensure_stub(
 )
 
 _REPO = Path(__file__).resolve().parents[1]
-_COMP_DIR = _REPO / "custom_components" / "ipbuilding_gateway_ha"
+_COMP_DIR = _REPO / "custom_components" / "ha_ipbuilding_gateway"
 
 # Build a synthetic package so ``from .const import`` resolves. Pytest may
 # import this test module more than once; always rebind the parent and
 # (re)load the submodules so the coordinator surface is current.
-_pkg = sys.modules.get("ipbuilding_gateway_ha")
+_pkg = sys.modules.get("ha_ipbuilding_gateway")
 if not isinstance(_pkg, types.ModuleType) or not hasattr(_pkg, "__path__"):
-    _pkg = types.ModuleType("ipbuilding_gateway_ha")
-    sys.modules["ipbuilding_gateway_ha"] = _pkg
+    _pkg = types.ModuleType("ha_ipbuilding_gateway")
+    sys.modules["ha_ipbuilding_gateway"] = _pkg
 _pkg.__path__ = [str(_COMP_DIR)]  # type: ignore[attr-defined]
 
 for _name in ("const", "coordinator"):
     _spec = importlib.util.spec_from_file_location(
-        f"ipbuilding_gateway_ha.{_name}", _COMP_DIR / f"{_name}.py"
+        f"ha_ipbuilding_gateway.{_name}", _COMP_DIR / f"{_name}.py"
     )
     _module = importlib.util.module_from_spec(_spec)
     sys.modules[_spec.name] = _module
     _spec.loader.exec_module(_module)  # type: ignore[union-attr]
 
-coordinator_mod = sys.modules["ipbuilding_gateway_ha.coordinator"]
+coordinator_mod = sys.modules["ha_ipbuilding_gateway.coordinator"]
 
 
 def _build_coordinator(*, data: list | dict | None = None):

@@ -1,4 +1,4 @@
-"""WebSocket coordinator for ipbuilding_gateway_ha.
+"""WebSocket coordinator for ha_ipbuilding_gateway.
 
 Manages the WebSocket connection to the gateway, maintains device state,
 and dispatches updates to platform entities.

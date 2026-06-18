@@ -1,8 +1,8 @@
-"""Constants for ipbuilding_gateway_ha."""
+"""Constants for ha_ipbuilding_gateway."""
 
 from homeassistant.const import CONF_HOST, CONF_PORT
 
-DOMAIN = "ipbuilding_gateway_ha"
+DOMAIN = "ha_ipbuilding_gateway"
 
 CONF_API_HOST = CONF_HOST
 CONF_API_PORT = CONF_PORT

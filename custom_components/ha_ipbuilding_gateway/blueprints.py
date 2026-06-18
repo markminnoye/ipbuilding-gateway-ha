@@ -28,7 +28,7 @@ async def async_install_packaged_blueprints(hass: HomeAssistant) -> None:
     """No-op since v0.4.0-rc.11.
 
     Previously this copied packaged blueprints into the operator's
-    ``config/blueprints/automation/ipbuilding_gateway_ha/`` folder.
+    ``config/blueprints/automation/ha_ipbuilding_gateway/`` folder.
     Operators now build their button automations via community
     blueprints, the standard HA UI flow, or the raw YAML in this
     repository as a reference. See README for details.
