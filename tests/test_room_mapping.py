@@ -64,3 +64,21 @@ def test_build_room_device_index_groups_by_room() -> None:
     assert len(index["Keuken"]) == 2
     assert len(index["Badkamer"]) == 1
     assert "Badkamer" in index
+
+
+def test_buttons_are_collected_and_grouped_with_channels() -> None:
+    """Buttons (semantic_type 'button') sync to areas just like channels.
+
+    Room mapping is type-agnostic — it groups any device with a ``room``. A
+    button in a room that has no channels (e.g. 'Hal') still gets its room
+    collected (so an area is created) and grouped (so it can be assigned).
+    """
+    devices = [
+        {"id": "10.10.1.30-0", "room": "Keuken", "semantic_type": "light"},
+        {"id": "2f8185190000df", "room": "Keuken", "semantic_type": "button"},
+        {"id": "2f8185190000e0", "room": "Hal", "semantic_type": "button"},
+    ]
+    assert room_mapping.collect_unique_rooms(devices) == ["Hal", "Keuken"]
+    index = room_mapping.build_room_device_index(devices)
+    assert len(index["Keuken"]) == 2  # light + button together
+    assert [d["id"] for d in index["Hal"]] == ["2f8185190000e0"]

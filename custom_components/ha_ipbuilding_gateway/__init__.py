@@ -16,10 +16,19 @@ from homeassistant.helpers import (
 )
 
 from .blueprints import async_install_packaged_blueprints
-from .const import CONF_ONBOARDING_COMPLETED, CONF_ONBOARDING_SKIPPED, DOMAIN
+from .button_automation_builder import collect_automations
+from .button_mapping import SLOT_LONG_PRESS, SLOT_PRESS, SLOT_RELEASE, parse_buttons
+from .const import (
+    CONF_BUTTON_AUTOMATIONS,
+    CONF_IMPORT_BUTTONS,
+    CONF_ROOM_MAPPINGS,
+    DOMAIN,
+)
 from .coordinator import IPBuildingCoordinator
 from .entity import module_device_model, module_device_name
 from .hub import gateway_device_info
+from .room_mapping import apply_room_mappings
+from .target_resolver import build_channel_entity_index
 
 log = logging.getLogger(__name__)
 
@@ -63,26 +72,88 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.async_on_unload(
             hass.async_create_task(_bootstrap_devices(hass, entry.entry_id))
         )
-    if not entry.data.get(CONF_ONBOARDING_COMPLETED) and not entry.data.get(
-        CONF_ONBOARDING_SKIPPED
-    ):
-        hass.async_create_task(_maybe_launch_onboarding(hass, entry))
+    # Apply the choices the coupling wizard collected (room→area mapping is
+    # idempotent — it never overwrites a user-set area). The wizard now runs
+    # inside the config flow, so there is no auto-launched options flow here.
+    await _apply_onboarding_results(hass, entry, coordinator)
     return True
 
 
-async def _maybe_launch_onboarding(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Open the onboarding wizard after the first successful setup.
+async def _apply_onboarding_results(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: IPBuildingCoordinator
+) -> None:
+    """Apply the room mapping and (optionally) import button automations.
 
-    Triggers the standard OptionsFlow for the just-created entry with
-    ``flow_id`` set to start a fresh flow, and a flag on
-    ``hass.data[DOMAIN]`` so the menu step auto-selects the
-    *Run setup wizard again* path. The operator can also reach the
-    same flow manually from *Settings → Devices & Services →
-    IPBuilding Gateway HA → Configure*.
+    Runs every setup. ``apply_room_mappings`` only assigns areas to devices
+    that have none, so it is safe to re-run and it also catches button devices
+    that only appeared after a ``getButtons`` refresh. Button automations are
+    built once (when ``CONF_IMPORT_BUTTONS`` is set and they are not stored
+    yet), since that step needs the channel entities created above.
     """
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][f"{entry.entry_id}_auto_onboard"] = True
-    await hass.config_entries.options.async_init(entry.entry_id)
+    mappings = entry.options.get(CONF_ROOM_MAPPINGS) or {}
+    if mappings:
+        apply_room_mappings(hass, entry, coordinator, dict(mappings))
+
+    if not entry.options.get(CONF_IMPORT_BUTTONS):
+        return
+    if entry.options.get(CONF_BUTTON_AUTOMATIONS):
+        return  # already imported
+    await _import_button_automations(hass, entry, coordinator)
+
+
+async def _import_button_automations(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: IPBuildingCoordinator
+) -> None:
+    """Build button automations from the input module's existing mapping."""
+    try:
+        parsed = parse_buttons(await coordinator.async_fetch_button_config())
+    except Exception:
+        log.exception("Failed to read button config for import")
+        return
+    if not parsed:
+        return
+
+    channel_index = build_channel_entity_index(hass, coordinator.devices_snapshot())
+    targets: dict[tuple[str, str], str] = {}
+    for button in parsed:
+        for action in button.actions:
+            if action.slot != SLOT_PRESS or action.warning:
+                continue
+            if action.target_ip_last_octet is None or action.target_channel is None:
+                continue
+            entity_id = channel_index.get(
+                (action.target_ip_last_octet, action.target_channel)
+            )
+            if entity_id:
+                targets[(button.hardware_id, action.slot)] = entity_id
+
+    device_registry = dr.async_get(hass)
+    hardware_ids = {p.hardware_id for p in parsed}
+    button_device_ids: dict[str, str] = {}
+    for device in device_registry.devices.values():
+        for domain, identifier in device.identifiers:
+            if domain == DOMAIN and identifier in hardware_ids:
+                button_device_ids[identifier] = device.id
+
+    automations = collect_automations(
+        parsed,
+        button_device_ids=button_device_ids,
+        target_entity_ids=targets,
+        modules_snapshot=coordinator.modules,
+        include_slots=(SLOT_PRESS, SLOT_LONG_PRESS, SLOT_RELEASE),
+    )
+
+    options = dict(entry.options)
+    options[CONF_BUTTON_AUTOMATIONS] = {
+        "targets": {f"{k[0]}|{k[1]}": v for k, v in targets.items()},
+        "automations": automations,
+    }
+    hass.config_entries.async_update_entry(entry, options=options)
+
+    try:
+        await hass.services.async_call("automation", "reload", blocking=False)
+    except Exception as exc:
+        log.debug("automation.reload skipped: %s", exc)
 
 
 async def _bootstrap_devices(hass: HomeAssistant, entry_id: str) -> None:

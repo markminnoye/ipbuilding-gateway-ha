@@ -16,6 +16,21 @@
       "discovery_confirm": {
         "title": "IPBuilding Gateway ontdekt",
         "description": "Home Assistant heeft een IPBuilding Gateway gevonden op {url}. Toevoegen?"
+      },
+      "ob_rooms": {
+        "title": "Ruimtes koppelen aan areas",
+        "description": "Koppel {room_count} IPBuilding-ruimte(n) aan Home Assistant areas. Laat leeg om een area met dezelfde naam aan te maken."
+      },
+      "ob_entities": {
+        "title": "Nieuwe entiteiten",
+        "description": "Deze apparaten worden toegevoegd — {total_count} in totaal ({light_count} lampen, {switch_count} schakelaars, {button_count} knoppen):\n\n{entities}\n\nGa verder naar de knoppen."
+      },
+      "ob_buttons": {
+        "title": "Knopconfiguratie importeren",
+        "description": "{button_count} knop(pen) gevonden; {actionable_count} met acties, {warning_count} waarschuwing(en). De bestaande knop-mapping van de inputmodule als automatiseringen importeren?",
+        "data": {
+          "import_buttons": "Knop-automatiseringen importeren"
+        }
       }
     },
     "error": {
@@ -29,6 +44,9 @@
       "already_discovered_addon": "Deze gateway draait als Home Assistant add-on en is al ontdekt via Supervisor.",
       "not_ipbuilding_gateway_addon": "Deze Supervisor add-on is niet de IPBuilding Gateway.",
       "onboarding_complete": "Onboarding afgerond."
+    },
+    "progress": {
+      "preparing": "Voorbereiden — apparaten en knopconfiguratie van de gateway inlezen…"
     }
   },
   "options": {

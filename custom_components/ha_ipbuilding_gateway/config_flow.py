@@ -17,6 +17,7 @@ pattern:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -26,10 +27,22 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import callback
+from homeassistant.helpers import area_registry as ar, selector
 from homeassistant.helpers.service_info.hassio import HassioServiceInfo
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
+from .button_automation_builder import summarise_for_wizard
+from .button_mapping import parse_buttons
+from .gateway_rest import (
+    async_fetch_button_config,
+    async_fetch_devices,
+    async_refresh_module_metadata,
+    async_run_discover,
+)
 from .const import (
+    CONF_IMPORT_BUTTONS,
+    CONF_ONBOARDING_COMPLETED,
+    CONF_ROOM_MAPPINGS,
     DEFAULT_API_HOST,
     DEFAULT_API_PORT,
     DISCOVERY_SCHEMA_VERSION,
@@ -39,6 +52,7 @@ from .discovery_parser import (
     GatewayDiscoveryInfo,
     parse_zeroconf_properties as _parse_zeroconf_properties,
 )
+from .room_mapping import collect_unique_rooms
 
 log = logging.getLogger(__name__)
 
@@ -86,6 +100,17 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._discovery_info: GatewayDiscoveryInfo | None = None
+        # Onboarding wizard state (runs inside this flow before the entry exists).
+        self._ob_host: str = ""
+        self._ob_port: int = DEFAULT_API_PORT
+        self._ob_title: str = "IPBuilding Gateway"
+        self._ob_devices: list[dict[str, Any]] = []
+        self._ob_buttons: list[dict[str, Any]] = []
+        self._ob_rooms: list[str] = []
+        self._ob_room_mappings: dict[str, str] = {}
+        self._ob_import_buttons: bool = True
+        self._ob_prepared: bool = False
+        self._ob_prepare_task: asyncio.Task[None] | None = None
 
     # ------------------------------------------------------------------
     # User (manual) step
@@ -105,9 +130,8 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
                 unique_id = instance_id or f"{host}:{port}"
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured(updates=user_input)
-                return self.async_create_entry(
-                    title=f"IPBuilding Gateway ({host})",
-                    data=user_input,
+                return await self._start_onboarding(
+                    host, int(port), f"IPBuilding Gateway ({host})"
                 )
             errors["base"] = error or "gateway_unreachable"
 
@@ -171,9 +195,8 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
             if not valid:
                 return self.async_abort(reason="cannot_connect")
 
-            return self.async_create_entry(
-                title="IPBuilding Gateway (add-on)",
-                data={CONF_HOST: host, CONF_PORT: port},
+            return await self._start_onboarding(
+                host, int(port), "IPBuilding Gateway (add-on)"
             )
 
         return self.async_show_form(
@@ -270,9 +293,8 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
         url = info.base_url or f"http://{info.host}:{info.port}"
 
         if user_input is not None:
-            return self.async_create_entry(
-                title="IPBuilding Gateway",
-                data={CONF_HOST: info.host, CONF_PORT: info.port},
+            return await self._start_onboarding(
+                info.host, int(info.port), "IPBuilding Gateway"
             )
 
         return self.async_show_form(
@@ -281,6 +303,186 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
                 "url": url,
                 "version": info.version or "onbekend",
             },
+        )
+
+    # ------------------------------------------------------------------
+    # Onboarding wizard (runs inside the coupling flow, before the entry
+    # exists). Reads the gateway over REST and persists the operator's
+    # choices into the entry; the actual area assignment and button
+    # automations are applied in ``async_setup_entry`` once entities and
+    # devices exist.
+    # ------------------------------------------------------------------
+
+    async def _start_onboarding(
+        self, host: str, port: int, title: str
+    ) -> ConfigFlowResult:
+        """Begin the in-flow wizard after a gateway has been confirmed."""
+        self._ob_host = host
+        self._ob_port = port
+        self._ob_title = title
+        return await self.async_step_ob_prepare()
+
+    async def async_step_ob_prepare(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Load gateway data; run a one-off sweep/metadata refresh if needed.
+
+        Fast path — the gateway already exposes channels *and* buttons: no
+        spinner, straight to room mapping. Otherwise a single progress spinner
+        covers a discovery sweep (empty gateway) and a ``getButtons`` refresh
+        so input-module buttons and their rooms are present for mapping.
+        """
+        if self._ob_prepared:
+            return await self.async_step_ob_rooms()
+
+        if self._ob_prepare_task is None:
+            devices = await async_fetch_devices(self._ob_host, self._ob_port)
+            has_buttons = any(d.get("semantic_type") == "button" for d in devices)
+            if devices and has_buttons:
+                self._ob_devices = devices
+                self._ob_buttons = await async_fetch_button_config(
+                    self._ob_host, self._ob_port
+                )
+                self._ob_prepared = True
+                return await self.async_step_ob_rooms()
+            self._ob_prepare_task = self.hass.async_create_task(
+                self._ob_prepare_data()
+            )
+            return self.async_show_progress(
+                step_id="ob_prepare",
+                progress_action="preparing",
+                progress_task=self._ob_prepare_task,
+            )
+
+        try:
+            await self._ob_prepare_task
+        except Exception as exc:  # noqa: BLE001 — best-effort, already logged
+            log.debug("Onboarding prepare raised: %s", exc)
+        finally:
+            self._ob_prepare_task = None
+            self._ob_prepared = True
+        return self.async_show_progress_done(next_step_id="ob_rooms")
+
+    async def _ob_prepare_data(self) -> None:
+        devices = await async_fetch_devices(self._ob_host, self._ob_port)
+        if not devices:
+            await async_run_discover(self._ob_host, self._ob_port)
+        # Force getButtons so input-module buttons (and their rooms) show up.
+        await async_refresh_module_metadata(self._ob_host, self._ob_port)
+        self._ob_devices = await async_fetch_devices(self._ob_host, self._ob_port)
+        self._ob_buttons = await async_fetch_button_config(
+            self._ob_host, self._ob_port
+        )
+
+    async def async_step_ob_rooms(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Map gateway room names to Home Assistant areas (creates missing areas)."""
+        rooms = collect_unique_rooms(self._ob_devices)
+        self._ob_rooms = rooms
+        if not rooms:
+            return await self.async_step_ob_entities()
+
+        areas = ar.async_get(self.hass)
+        if user_input is not None:
+            mappings: dict[str, str] = {}
+            for room in rooms:
+                area_id = user_input.get(room, "") or ""
+                if not area_id:
+                    existing = areas.async_get_area_by_name(room)
+                    area_id = existing.id if existing else areas.async_create(room).id
+                mappings[room] = area_id
+            self._ob_room_mappings = mappings
+            return await self.async_step_ob_entities()
+
+        # Key fields by room name so HA renders the room as the field label,
+        # and preselect a same-named existing area.
+        schema: dict[Any, Any] = {}
+        for room in rooms:
+            existing = areas.async_get_area_by_name(room)
+            schema[vol.Optional(room, default=existing.id if existing else "")] = (
+                selector.AreaSelector()
+            )
+        return self.async_show_form(
+            step_id="ob_rooms",
+            data_schema=vol.Schema(schema),
+            description_placeholders={"room_count": str(len(rooms))},
+        )
+
+    async def async_step_ob_entities(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Read-only overview of the entities that will be added."""
+        if user_input is not None:
+            return await self.async_step_ob_buttons()
+        return self.async_show_form(
+            step_id="ob_entities",
+            data_schema=vol.Schema({}),
+            description_placeholders=self._entities_overview_placeholders(),
+        )
+
+    def _entities_overview_placeholders(self) -> dict[str, str]:
+        by_room: dict[str, list[str]] = {}
+        light_count = switch_count = button_count = 0
+        for dev in self._ob_devices:
+            semantic = dev.get("semantic_type")
+            name = str(dev.get("name") or dev.get("id") or "")
+            room = str(dev.get("room") or "—")
+            if semantic == "button":
+                button_count += 1
+            elif semantic == "switch":
+                switch_count += 1
+            else:
+                light_count += 1
+            by_room.setdefault(room, []).append(name)
+        lines = [
+            f"**{room}** ({len(by_room[room])}): {', '.join(sorted(by_room[room]))}"
+            for room in sorted(by_room)
+        ]
+        return {
+            "light_count": str(light_count),
+            "switch_count": str(switch_count),
+            "button_count": str(button_count),
+            "total_count": str(len(self._ob_devices)),
+            "entities": "\n".join(lines) or "—",
+        }
+
+    async def async_step_ob_buttons(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Confirm import of the input module's existing button configuration."""
+        parsed = parse_buttons(self._ob_buttons)
+        if not parsed:
+            self._ob_import_buttons = False
+            return await self._ob_finish()
+        if user_input is not None:
+            self._ob_import_buttons = bool(user_input.get("import_buttons", True))
+            return await self._ob_finish()
+        summary = summarise_for_wizard(parsed)
+        return self.async_show_form(
+            step_id="ob_buttons",
+            data_schema=vol.Schema(
+                {vol.Optional("import_buttons", default=True): bool}
+            ),
+            description_placeholders={
+                "button_count": str(summary["button_count"]),
+                "actionable_count": str(summary["actionable_count"]),
+                "warning_count": str(summary["warning_count"]),
+            },
+        )
+
+    async def _ob_finish(self) -> ConfigFlowResult:
+        options: dict[str, Any] = {CONF_IMPORT_BUTTONS: self._ob_import_buttons}
+        if self._ob_room_mappings:
+            options[CONF_ROOM_MAPPINGS] = self._ob_room_mappings
+        return self.async_create_entry(
+            title=self._ob_title,
+            data={
+                CONF_HOST: self._ob_host,
+                CONF_PORT: self._ob_port,
+                CONF_ONBOARDING_COMPLETED: True,
+            },
+            options=options,
         )
 
     @staticmethod

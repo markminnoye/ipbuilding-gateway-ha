@@ -16,6 +16,21 @@
       "discovery_confirm": {
         "title": "IPBuilding Gateway discovered",
         "description": "Found IPBuilding Gateway {version} at {url}. Add it?"
+      },
+      "ob_rooms": {
+        "title": "Map rooms to areas",
+        "description": "Link {room_count} IPBuilding room(s) to Home Assistant areas. Leave empty to create an area with the same name."
+      },
+      "ob_entities": {
+        "title": "New entities",
+        "description": "These devices will be added — {total_count} total ({light_count} lights, {switch_count} switches, {button_count} buttons):\n\n{entities}\n\nContinue to button setup."
+      },
+      "ob_buttons": {
+        "title": "Import button configuration",
+        "description": "Detected {button_count} button(s); {actionable_count} have actions configured, {warning_count} warning(s). Import the input module's existing button mapping as automations?",
+        "data": {
+          "import_buttons": "Import button automations"
+        }
       }
     },
     "error": {
@@ -29,6 +44,9 @@
       "already_discovered_addon": "This gateway is running as a Home Assistant add-on and is already discovered via Supervisor.",
       "not_ipbuilding_gateway_addon": "This Supervisor add-on is not the IPBuilding Gateway.",
       "onboarding_complete": "Onboarding finished."
+    },
+    "progress": {
+      "preparing": "Preparing — reading devices and button configuration from the gateway…"
     }
   },
   "options": {
