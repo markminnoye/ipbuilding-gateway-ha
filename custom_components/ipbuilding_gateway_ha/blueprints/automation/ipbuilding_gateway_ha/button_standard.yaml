@@ -1,15 +1,14 @@
-# ipbuilding_blueprint_version: 1
+# ipbuilding_blueprint_version: 2
 blueprint:
   name: IPBuilding wandknop — kort en lang
   description: >
     Two-phase control for an IPBuilding IP1100PoE wall switch. Use this
     when a short press and a long press should drive different things.
 
-    Each phase has the same four inputs:
+    Each phase has two inputs:
       - action: what to do (`Geen`, `Aan`, `Uit`, `Toggle`, `Scene activeren`)
-      - target type: één entity of alle lampen in een ruimte
-      - target: de gekozen entity of ruimte
-      - (only for entity-target) extra domain-keuze
+      - target: één entity, meerdere entities, of alle lampen/schakelaars
+        in een ruimte. Scenes worden ook ondersteund.
 
     Use a separate `button_cover` blueprint for curtains (hold-to-move +
     release-to-stop). Use `button_dim` for dimming while held. Use
@@ -77,25 +76,13 @@ blueprint:
                 - label: Scene activeren
                   value: "activate_scene"
 
-        press_target_kind:
-          name: Doeltype
+        press_target:
+          name: Doel
           description: >
-            Eén entity (lamp, schakelaar, scene) of alle lampen in een ruimte.
-            Bij "Scene activeren" moet het doeltype "Eén entity" zijn.
-          default: entity
-          selector:
-            select:
-              options:
-                - label: Eén entity
-                  value: entity
-                - label: Alle lampen in een ruimte
-                  value: area
-
-        press_entity_target:
-          name: Entity
-          description: >
-            Lamp, schakelaar of scene. Verplicht bij doeltype "Eén entity".
-          default: ""
+            Lamp, schakelaar, scene of ruimte. Voor meerdere tegelijk:
+            voeg ze toe via het plus-icoon. Bij "Scene activeren" moet
+            minstens één scene in dit doel zitten.
+          default: {}
           selector:
             target:
               entity:
@@ -103,15 +90,6 @@ blueprint:
                   - light
                   - switch
                   - scene
-
-        press_area:
-          name: Ruimte
-          description: >
-            Alle lampen in deze ruimte. Verplicht bij doeltype "Alle lampen
-            in een ruimte".
-          default: ""
-          selector:
-            area:
 
     long_press_section:
       name: Lang indrukken (optioneel)
@@ -138,20 +116,12 @@ blueprint:
                 - label: Scene activeren
                   value: "activate_scene"
 
-        long_press_target_kind:
-          name: Doeltype
-          default: entity
-          selector:
-            select:
-              options:
-                - label: Eén entity
-                  value: entity
-                - label: Alle lampen in een ruimte
-                  value: area
-
-        long_press_entity_target:
-          name: Entity
-          default: ""
+        long_press_target:
+          name: Doel
+          description: >
+            Lamp, schakelaar, scene of ruimte. Voor meerdere tegelijk:
+            voeg ze toe via het plus-icoon.
+          default: {}
           selector:
             target:
               entity:
@@ -160,25 +130,19 @@ blueprint:
                   - switch
                   - scene
 
-        long_press_area:
-          name: Ruimte
-          default: ""
-          selector:
-            area:
-
 alias: !input automation_name
 area_id: !input automation_area
 mode: single
 
 variables:
   press_action: !input press_action
-  press_target_kind: !input press_target_kind
-  press_entity_target: !input press_entity_target
-  press_area: !input press_area
+  press_target: !input press_target
   long_press_action: !input long_press_action
-  long_press_target_kind: !input long_press_target_kind
-  long_press_entity_target: !input long_press_entity_target
-  long_press_area: !input long_press_area
+  long_press_target: !input long_press_target
+  # Scene-guard: een `target:` bevat altijd een `entity_id` lijst; scene-entities
+  # hebben als prefix `scene.`. We checken of er minstens één scene in zit.
+  press_has_scene: "{{ 'scene.' in (press_target.entity_id | default([]) | join(',')) }}"
+  long_press_has_scene: "{{ 'scene.' in (long_press_target.entity_id | default([]) | join(',')) }}"
 
 trigger:
   - platform: state
@@ -192,128 +156,80 @@ trigger:
 
 action:
   - choose:
-      # Press + entity-target, normalise action.
+      # Press + scene-activatie: alleen als er een scene in het target zit.
       - conditions:
           - condition: trigger
             id: press
           - condition: template
-            value_template: "{{ press_action != 'none' and press_target_kind == 'entity' }}"
+            value_template: "{{ press_action == 'activate_scene' and press_has_scene }}"
         sequence:
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ press_action == 'on' }}"
-                sequence:
-                  - action: homeassistant.turn_on
-                    target: !input press_entity_target
-              - conditions:
-                  - condition: template
-                    value_template: "{{ press_action == 'off' }}"
-                sequence:
-                  - action: homeassistant.turn_off
-                    target: !input press_entity_target
-              - conditions:
-                  - condition: template
-                    value_template: "{{ press_action == 'toggle' }}"
-                sequence:
-                  - action: homeassistant.toggle
-                    target: !input press_entity_target
-              - conditions:
-                  - condition: template
-                    value_template: "{{ press_action == 'activate_scene' }}"
-                sequence:
-                  - action: scene.turn_on
-                    target: !input press_entity_target
+          - action: scene.turn_on
+            target: !input press_target
 
-      # Press + area-target. Only light services have meaningful area_ids.
+      # Press + on/off/toggle: alleen als er GEEN scene in het target zit
+      # (een scene-entity heeft geen on/off/toggle; actie wordt defensief
+      # overgeslagen in plaats van een fout te geven).
       - conditions:
           - condition: trigger
             id: press
           - condition: template
-            value_template: "{{ press_action != 'none' and press_target_kind == 'area' }}"
+            value_template: "{{ press_action == 'on' and not press_has_scene }}"
         sequence:
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ press_action == 'on' }}"
-                sequence:
-                  - action: light.turn_on
-                    target:
-                      area_id: !input press_area
-              - conditions:
-                  - condition: template
-                    value_template: "{{ press_action == 'off' }}"
-                sequence:
-                  - action: light.turn_off
-                    target:
-                      area_id: !input press_area
-              - conditions:
-                  - condition: template
-                    value_template: "{{ press_action == 'toggle' }}"
-                sequence:
-                  - action: light.toggle
-                    target:
-                      area_id: !input press_area
+          - action: homeassistant.turn_on
+            target: !input press_target
 
-      # Long press + entity-target.
+      - conditions:
+          - condition: trigger
+            id: press
+          - condition: template
+            value_template: "{{ press_action == 'off' and not press_has_scene }}"
+        sequence:
+          - action: homeassistant.turn_off
+            target: !input press_target
+
+      - conditions:
+          - condition: trigger
+            id: press
+          - condition: template
+            value_template: "{{ press_action == 'toggle' and not press_has_scene }}"
+        sequence:
+          - action: homeassistant.toggle
+            target: !input press_target
+
+      # Long press + scene-activatie.
       - conditions:
           - condition: trigger
             id: long_press
           - condition: template
-            value_template: "{{ long_press_action != 'none' and long_press_target_kind == 'entity' }}"
+            value_template: "{{ long_press_action == 'activate_scene' and long_press_has_scene }}"
         sequence:
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ long_press_action == 'on' }}"
-                sequence:
-                  - action: homeassistant.turn_on
-                    target: !input long_press_entity_target
-              - conditions:
-                  - condition: template
-                    value_template: "{{ long_press_action == 'off' }}"
-                sequence:
-                  - action: homeassistant.turn_off
-                    target: !input long_press_entity_target
-              - conditions:
-                  - condition: template
-                    value_template: "{{ long_press_action == 'toggle' }}"
-                sequence:
-                  - action: homeassistant.toggle
-                    target: !input long_press_entity_target
-              - conditions:
-                  - condition: template
-                    value_template: "{{ long_press_action == 'activate_scene' }}"
-                sequence:
-                  - action: scene.turn_on
-                    target: !input long_press_entity_target
+          - action: scene.turn_on
+            target: !input long_press_target
 
-      # Long press + area-target.
+      # Long press + on/off/toggle (geen scene).
       - conditions:
           - condition: trigger
             id: long_press
           - condition: template
-            value_template: "{{ long_press_action != 'none' and long_press_target_kind == 'area' }}"
+            value_template: "{{ long_press_action == 'on' and not long_press_has_scene }}"
         sequence:
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ long_press_action == 'on' }}"
-                sequence:
-                  - action: light.turn_on
-                    target:
-                      area_id: !input long_press_area
-              - conditions:
-                  - condition: template
-                    value_template: "{{ long_press_action == 'off' }}"
-                sequence:
-                  - action: light.turn_off
-                    target:
-                      area_id: !input long_press_area
-              - conditions:
-                  - condition: template
-                    value_template: "{{ long_press_action == 'toggle' }}"
-                sequence:
-                  - action: light.toggle
-                    target:
-                      area_id: !input long_press_area
+          - action: homeassistant.turn_on
+            target: !input long_press_target
+
+      - conditions:
+          - condition: trigger
+            id: long_press
+          - condition: template
+            value_template: "{{ long_press_action == 'off' and not long_press_has_scene }}"
+        sequence:
+          - action: homeassistant.turn_off
+            target: !input long_press_target
+
+      - conditions:
+          - condition: trigger
+            id: long_press
+          - condition: template
+            value_template: "{{ long_press_action == 'toggle' and not long_press_has_scene }}"
+        sequence:
+          - action: homeassistant.toggle
+            target: !input long_press_target

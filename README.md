@@ -140,8 +140,8 @@ release.
 
 | Blueprint | When to use |
 |-----------|-------------|
-| [`button_toggle`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_toggle.yaml) | Single tap toggles a light or switch, or all lights in a room |
-| [`button_standard`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_standard.yaml) | Short and/or long press, each with on / off / toggle / scene for an entity or all lights in an area |
+| [`button_toggle`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_toggle.yaml) | Single tap toggles a light or switch |
+| [`button_standard`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_standard.yaml) | Short and/or long press, each with on / off / toggle / scene for an entity, multiple entities, or all entities in an area |
 | [`button_dim`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_dim.yaml) | Toggle on short press, dim while held with auto direction-flip (requires an `input_boolean` helper) |
 | [`button_cover`](custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/button_cover.yaml) | Hold = open or close a curtain / screen, release = stop |
 

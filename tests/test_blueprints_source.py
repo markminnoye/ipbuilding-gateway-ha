@@ -109,15 +109,20 @@ def test_dim_blueprint_has_helper_user_instructions() -> None:
 
 
 def test_every_non_legacy_blueprint_has_alias_and_area_id() -> None:
-    """Every shipped blueprint (except the legacy dim stub) exposes alias + area_id.
+    """Every shipped blueprint (except the legacy dim stub and the
+    minimal `button_toggle`) exposes alias + area_id.
 
     Both top-level keys are part of the operator UX promise from the
     2026-06-18 design spec: the automation name comes from the operator
     (typically the friendly button name) and the room follows the
     gateway-side ``room`` field via ``suggested_area``.
+
+    `button_toggle` is the minimal blueprint: HA asks for the room in
+    the popup that appears after pressing "Opslaan", so the blueprint
+    does not declare an `automation_area` input.
     """
     for path in _shipped_blueprints():
-        if path.name == "dim_button.yaml":
+        if path.name in ("dim_button.yaml", "button_toggle.yaml"):
             continue
         text = path.read_text(encoding="utf-8")
         assert "alias: !input automation_name" in text, (
@@ -178,6 +183,119 @@ def test_cover_blueprint_uses_hold_and_release_triggers() -> None:
     text = path.read_text(encoding="utf-8")
     assert 'to: "long_press"' in text
     assert 'to: "release"' in text
+
+
+def test_toggle_blueprint_has_no_automation_area_input() -> None:
+    """`button_toggle.yaml` must not declare an `automation_area` input.
+
+    The automation area is asked by Home Assistant in the popup that
+    appears after pressing "Opslaan". Declaring it as a blueprint input
+    would produce a duplicate "Ruimte" label in the UI.
+    """
+    path = _BLUEPRINT_DIR / "button_toggle.yaml"
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    assert "area_id: !input automation_area" not in text, (
+        "button_toggle.yaml must not expose `area_id: !input "
+        "automation_area`. HA asks for the room in the popup after "
+        "Opslaan — duplicating it as a blueprint input is confusing."
+    )
+    assert "automation_area" not in text, (
+        "button_toggle.yaml must not declare an `automation_area` input "
+        "at all (the field name leaks via the variable too)."
+    )
+
+
+def test_toggle_blueprint_uses_entity_selector_not_target() -> None:
+    """`button_toggle.yaml` must use an `entity:` selector, not `target:`.
+
+    The minimal toggle blueprint is for a single entity. A `target:`
+    selector exposes the entity/device/area tabbladen, plus a
+    "Doel toevoegen" button. Both are noise for the minimal use case.
+    """
+    path = _BLUEPRINT_DIR / "button_toggle.yaml"
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    # target_kind / target_area zijn verwijderd in de UX-fix.
+    assert "target_kind" not in text, (
+        "button_toggle.yaml must not have a target_kind field"
+    )
+    assert "target_area" not in text, (
+        "button_toggle.yaml must not have a target_area field"
+    )
+    # Het enige target_entity-veld moet een entity-selector gebruiken,
+    # niet een target-selector.
+    assert "target: !input target_entity" not in text, (
+        "button_toggle.yaml must not pass a target: !input to the action"
+    )
+    # De selector voor target_entity moet `entity:` zijn (niet `target:`).
+    assert "selector:\n        entity:" in text, (
+        "button_toggle.yaml must declare an `entity:` selector for the target"
+    )
+
+
+def test_standard_blueprint_uses_target_selector() -> None:
+    """`button_standard.yaml` must use a `target:` selector per phase.
+
+    A `target:` selector lets the operator pick an entity, multiple
+    entities, or an area in one widget. The older split between
+    `press_entity_target` (target selector) and `press_area` (area
+    selector) caused duplicate "Ruimte" labels in the UI.
+    """
+    path = _BLUEPRINT_DIR / "button_standard.yaml"
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    # Per fase moet er een `press_target` / `long_press_target` zijn
+    # met een target-selector.
+    assert "press_target:" in text
+    assert "long_press_target:" in text
+    # Oude velden moeten weg zijn.
+    for forbidden in (
+        "press_target_kind",
+        "press_entity_target",
+        "press_area:",
+        "long_press_target_kind",
+        "long_press_entity_target",
+        "long_press_area:",
+    ):
+        assert forbidden not in text, (
+            f"button_standard.yaml must not declare `{forbidden}`; use the "
+            "combined `*_target` field with a `target:` selector instead."
+        )
+
+
+def test_standard_blueprint_has_scene_guard() -> None:
+    """`button_standard.yaml` must guard scene-targeted actions.
+
+    A scene has no on/off/toggle state, so `on`/`off`/`toggle` actions
+    must skip when the target contains a scene entity. Likewise,
+    `activate_scene` must skip when the target has no scene entity.
+    The blueprint must derive `*_has_scene` from the target and
+    reference it in conditions.
+    """
+    path = _BLUEPRINT_DIR / "button_standard.yaml"
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    assert "press_has_scene" in text, (
+        "button_standard.yaml must derive `press_has_scene` from the target"
+    )
+    assert "long_press_has_scene" in text, (
+        "button_standard.yaml must derive `long_press_has_scene` from the target"
+    )
+    # On/off/toggle voor press mogen alleen lopen als er GEEN scene in zit.
+    assert "press_action == 'on' and not press_has_scene" in text, (
+        "press `on` must be guarded by `not press_has_scene`"
+    )
+    assert "press_action == 'off' and not press_has_scene" in text
+    assert "press_action == 'toggle' and not press_has_scene" in text
+    # activate_scene moet lopen als er WEL een scene in zit.
+    assert (
+        "press_action == 'activate_scene' and press_has_scene" in text
+    ), "press `activate_scene` must be guarded by `press_has_scene`"
 
 
 def test_select_option_values_are_strings() -> None:

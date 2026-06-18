@@ -25,6 +25,12 @@ anders meldt.
 
 ## [Unreleased]
 
+## [0.4.0-rc.8] - 2026-06-18
+
+### Changed
+- **`button_toggle.yaml` (v2) — minimale UX** — vervangt de `target:`-selector (die tabbladen voor entity / apparaat / ruimte toonde plus een "Doel toevoegen"-knop) door een `entity:`-selector met `multiple: false`. Het veld `target_kind` en `target_area` zijn verwijderd; de toggle-blauprint is nu één entity op één knop. De `automation_area` input is verwijderd: HA vraagt de ruimte in de popup die verschijnt na "Opslaan", en een tweede "Ruimte"-veld in de blueprint was verwarrend.
+- **`button_standard.yaml` (v2) — target-selector + scene-guard** — vervangt 8 separate velden (`*_target_kind`, `*_entity_target`, `*_area` per fase) door één `target:`-veld per fase. De `target:`-selector biedt automatisch entity, meerdere entities, of een ruimte in één widget. Een afgeleide `*_has_scene` variable checkt of het target een scene bevat; `on`/`off`/`toggle` worden defensief overgeslagen wanneer dat zo is, en `activate_scene` wordt overgeslagen wanneer er geen scene in het target zit.
+
 ## [0.4.0-rc.7] - 2026-06-18
 
 ### Fixed
