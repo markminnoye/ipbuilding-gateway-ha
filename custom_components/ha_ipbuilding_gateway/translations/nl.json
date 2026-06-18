@@ -73,7 +73,7 @@
       }
     },
     "progress": {
-      "discovery": "De fieldbus wordt gescand op modules — dit kan tot ±10 seconden duren. Even geduld…",
+      "discovery": "De fieldbus wordt gescand op modules — dit kan 10 tot 30 seconden duren. Even geduld…",
       "modules_refresh": "De knopconfiguratie wordt ingelezen uit de inputmodule(s)…"
     }
   },

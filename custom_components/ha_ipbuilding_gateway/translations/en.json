@@ -73,7 +73,7 @@
       }
     },
     "progress": {
-      "discovery": "Scanning the field bus for modules — this can take up to ~10 seconds. Please wait…",
+      "discovery": "Scanning the field bus for modules — this can take 10–30 seconds. Please wait…",
       "modules_refresh": "Reading the button configuration from the input module(s)…"
     }
   },
