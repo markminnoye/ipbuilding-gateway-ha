@@ -325,26 +325,32 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_ob_prepare(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Load gateway data; run a one-off sweep/metadata refresh if needed.
+        """Load gateway data, then go to room mapping.
 
-        Fast path — the gateway already exposes channels *and* buttons: no
-        spinner, straight to room mapping. Otherwise a single progress spinner
-        covers a discovery sweep (empty gateway) and a ``getButtons`` refresh
-        so input-module buttons and their rooms are present for mapping.
+        A progress spinner is shown ONLY when the gateway returns no devices at
+        all and a discovery sweep is genuinely needed. For an already-populated
+        gateway there is no scan screen: we load devices (and, if the snapshot
+        does not yet include buttons, do a quick best-effort getButtons refresh
+        inline) and continue straight to the room step.
         """
         if self._ob_prepared:
             return await self.async_step_ob_rooms()
 
         if self._ob_prepare_task is None:
             devices = await async_fetch_devices(self._ob_host, self._ob_port)
-            has_buttons = any(d.get("semantic_type") == "button" for d in devices)
-            if devices and has_buttons:
+            if devices:
+                # Populated gateway: no scan. Pull in button metadata only if the
+                # snapshot is missing it (quick, no progress UI).
+                if not any(d.get("semantic_type") == "button" for d in devices):
+                    await async_refresh_module_metadata(self._ob_host, self._ob_port)
+                    devices = await async_fetch_devices(self._ob_host, self._ob_port)
                 self._ob_devices = devices
                 self._ob_buttons = await async_fetch_button_config(
                     self._ob_host, self._ob_port
                 )
                 self._ob_prepared = True
                 return await self.async_step_ob_rooms()
+            # Truly empty gateway: a discovery sweep is needed — show progress.
             self._ob_prepare_task = self.hass.async_create_task(
                 self._ob_prepare_data()
             )
@@ -364,10 +370,9 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_progress_done(next_step_id="ob_rooms")
 
     async def _ob_prepare_data(self) -> None:
-        devices = await async_fetch_devices(self._ob_host, self._ob_port)
-        if not devices:
-            await async_run_discover(self._ob_host, self._ob_port)
-        # Force getButtons so input-module buttons (and their rooms) show up.
+        # Only reached for an empty gateway: run the discovery sweep, then load
+        # button metadata so the snapshot is complete for the wizard.
+        await async_run_discover(self._ob_host, self._ob_port)
         await async_refresh_module_metadata(self._ob_host, self._ob_port)
         self._ob_devices = await async_fetch_devices(self._ob_host, self._ob_port)
         self._ob_buttons = await async_fetch_button_config(
