@@ -160,23 +160,8 @@ for reference and for the source-only tests:
 To wire an IP1100PoE physical button to a lamp, dimmer, cover, or
 scene, use one of the following paths.
 
-### 1. Community blueprint (recommended for most users)
 
-The HA community maintains a number of blueprints that work with the
-event entities this companion creates (`event.<hardware_id>` with
-`press`, `long_press`, and `release` event types):
-
-- **[Philips Hue Dimmer Switch (Z2M) — Ultimate Controller](https://community.home-assistant.io/t/z2m-philips-hue-dimmer-switch-ultimate-controller-device-triggers-double-clicks/977875)**
-  matches our `press` / `long_press` / `release` semantics and supports
-  on/off buttons, dim-up, dim-down, and double-click.
-- **[IKEA STYRBAR 4-Button Remote (ZHA / MQTT)](https://gist.github.com/ivvil/08c95674732b51bc4ccf79938471cdc9)**
-  is configurable per button with press and press-and-hold actions.
-
-Install via HACS → Frontend → "Add repository" → import by URL, or via
-`ha_import_blueprint`. Then pick the event entity of your physical
-button as the trigger.
-
-### 2. Standard HA UI flow
+### 1. Standard HA UI flow
 
 From the device page (`Settings → Devices & entities →
 <your button> → ... → '+ Add to' → Create automation`), or
@@ -205,7 +190,7 @@ from `Settings → Automations & scenes → + Create automation
 - **Save**: the popup asks for a name. Use the friendly button name
   (e.g. "Keuken wandknop → Keuken LED") instead of the `event.<id>`.
 
-### 3. YAML reference (advanced)
+### 2. YAML reference (advanced)
 
 The packaged blueprints in this repo (`button_toggle`,
 `button_standard`, `button_dim`, `button_cover`) demonstrate the
