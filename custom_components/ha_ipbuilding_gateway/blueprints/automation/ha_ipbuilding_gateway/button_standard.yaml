@@ -1,18 +1,27 @@
-# ipbuilding_blueprint_version: 2
+# ipbuilding_blueprint_version: 7
 blueprint:
   name: IPBuilding wandknop — kort en lang
   description: >
-    Two-phase control for an IPBuilding IP1100PoE wall switch. Use this
-    when a short press and a long press should drive different things.
+    **Blueprint-versie: 7.** Two-phase control for an IPBuilding
+    IP1100PoE wall switch. Use this when a short press and a long
+    press should drive different things.
 
-    Each phase has two inputs:
-      - action: what to do (`Geen`, `Aan`, `Uit`, `Toggle`, `Scene activeren`)
-      - target: één entity, meerdere entities, of alle lampen/schakelaars
-        in een ruimte. Scenes worden ook ondersteund.
+    Each phase takes a full action sequence — the same editor you see
+    when building an automation in Home Assistant. Pick the service,
+    the target, and any extra data yourself: brightness, transition,
+    multiple lights, scenes, helpers, scripts, notifications — anything
+    HA can do, the blueprint can do on press and on long press.
 
-    Use a separate `button_cover` blueprint for curtains (hold-to-move +
-    release-to-stop). Use `button_dim` for dimming while held. Use
-    `button_toggle` when only the short press is needed.
+    Long press is optional; leave the "Lang indrukken" actions empty to
+    only react to short presses.
+
+    Press-vs-long-press is decided in the gateway: a short tap emits
+    `single_press` on release, a hold emits `long_press` at the
+    threshold. The two are mutually exclusive, so this blueprint just
+    maps each to a full action sequence — no timing logic.
+
+    For dimming while held use `button_dim`. For curtains
+    (hold-to-move / release-to-stop) use `button_cover`.
   domain: automation
   source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/button_standard.yaml
 
@@ -21,16 +30,6 @@ blueprint:
       name: Algemeen
       icon: mdi:cog-outline
       input:
-        automation_name:
-          name: Naam automatisering
-          description: >
-            Gebruik de weergavenaam van de knop, bv.
-            "Keuken wandknop → Keuken LED". De entity_id
-            `event.<hardware_id>` is bewust niet leesbaar.
-          default: ""
-          selector:
-            text:
-
         button_entity:
           name: Knop
           description: >
@@ -43,53 +42,19 @@ blueprint:
                 - domain: event
                   integration: ha_ipbuilding_gateway
 
-        automation_area:
-          name: Ruimte
-          description: >
-            Ruimte voor de automatisering. De companion zet de `room` uit
-            devices.json als `suggested_area` op het knop-device; kies
-            hier dezelfde ruimte zodat de automatisering in de Lovelace-ruimte
-            verschijnt.
-          default: ""
-          selector:
-            area:
-
     press_section:
       name: Korte druk
       icon: mdi:gesture-tap-button
       input:
         press_action:
-          name: Actie
-          description: Wat de automatisering op een korte druk doet.
-          default: toggle
-          selector:
-            select:
-              options:
-                - label: Geen (alleen reageren op lang indrukken)
-                  value: "none"
-                - label: Aan
-                  value: "on"
-                - label: Uit
-                  value: "off"
-                - label: Toggle
-                  value: "toggle"
-                - label: Scene activeren
-                  value: "activate_scene"
-
-        press_target:
-          name: Doel
+          name: Actie bij korte druk
           description: >
-            Lamp, schakelaar, scene of ruimte. Voor meerdere tegelijk:
-            voeg ze toe via het plus-icoon. Bij "Scene activeren" moet
-            minstens één scene in dit doel zitten.
-          default: {}
+            Wat de automatisering doet op een korte druk. Dit is een
+            volledige action-editor — voeg één of meerdere service-calls
+            toe (lampen, scenes, helpers, scripts, notificaties, …).
+          default: []
           selector:
-            target:
-              entity:
-                domain:
-                  - light
-                  - switch
-                  - scene
+            action:
 
     long_press_section:
       name: Lang indrukken (optioneel)
@@ -97,139 +62,43 @@ blueprint:
       collapsed: true
       input:
         long_press_action:
-          name: Actie
+          name: Actie bij lange druk
           description: >
-            Wat de automatisering doet zodra de knop langer dan de hold-drempel
-            (gateway-side, standaard 1,5 s) wordt vastgehouden.
-          default: none
+            Wat de automatisering doet zodra de knop langer dan de
+            hold-drempel (~1,5 s) wordt vastgehouden. Laat leeg om
+            alleen op korte drukken te reageren.
+          default: []
           selector:
-            select:
-              options:
-                - label: Geen
-                  value: "none"
-                - label: Aan
-                  value: "on"
-                - label: Uit
-                  value: "off"
-                - label: Toggle
-                  value: "toggle"
-                - label: Scene activeren
-                  value: "activate_scene"
+            action:
 
-        long_press_target:
-          name: Doel
-          description: >
-            Lamp, schakelaar, scene of ruimte. Voor meerdere tegelijk:
-            voeg ze toe via het plus-icoon.
-          default: {}
-          selector:
-            target:
-              entity:
-                domain:
-                  - light
-                  - switch
-                  - scene
-
-alias: !input automation_name
-area_id: !input automation_area
 mode: single
 
-variables:
-  press_action: !input press_action
-  press_target: !input press_target
-  long_press_action: !input long_press_action
-  long_press_target: !input long_press_target
-  # Scene-guard: een `target:` bevat altijd een `entity_id` lijst; scene-entities
-  # hebben als prefix `scene.`. We checken of er minstens één scene in zit.
-  press_has_scene: "{{ 'scene.' in (press_target.entity_id | default([]) | join(',')) }}"
-  long_press_has_scene: "{{ 'scene.' in (long_press_target.entity_id | default([]) | join(',')) }}"
-
 trigger:
+  # The gateway now classifies the press: single_press fires on the
+  # release of a short tap, long_press fires at the hold threshold
+  # while the button is still held. They are mutually exclusive, so no
+  # wait/timeout is needed.
   - platform: state
     entity_id: !input button_entity
-    to: "press"
-    id: press
+    attribute: event_type
+    to: "single_press"
+    not_from:
+      - unavailable
+      - unknown
+    id: short
   - platform: state
     entity_id: !input button_entity
+    attribute: event_type
     to: "long_press"
-    id: long_press
+    not_from:
+      - unavailable
+      - unknown
+    id: long
 
 action:
   - choose:
-      # Press + scene-activatie: alleen als er een scene in het target zit.
       - conditions:
           - condition: trigger
-            id: press
-          - condition: template
-            value_template: "{{ press_action == 'activate_scene' and press_has_scene }}"
-        sequence:
-          - action: scene.turn_on
-            target: !input press_target
-
-      # Press + on/off/toggle: alleen als er GEEN scene in het target zit
-      # (een scene-entity heeft geen on/off/toggle; actie wordt defensief
-      # overgeslagen in plaats van een fout te geven).
-      - conditions:
-          - condition: trigger
-            id: press
-          - condition: template
-            value_template: "{{ press_action == 'on' and not press_has_scene }}"
-        sequence:
-          - action: homeassistant.turn_on
-            target: !input press_target
-
-      - conditions:
-          - condition: trigger
-            id: press
-          - condition: template
-            value_template: "{{ press_action == 'off' and not press_has_scene }}"
-        sequence:
-          - action: homeassistant.turn_off
-            target: !input press_target
-
-      - conditions:
-          - condition: trigger
-            id: press
-          - condition: template
-            value_template: "{{ press_action == 'toggle' and not press_has_scene }}"
-        sequence:
-          - action: homeassistant.toggle
-            target: !input press_target
-
-      # Long press + scene-activatie.
-      - conditions:
-          - condition: trigger
-            id: long_press
-          - condition: template
-            value_template: "{{ long_press_action == 'activate_scene' and long_press_has_scene }}"
-        sequence:
-          - action: scene.turn_on
-            target: !input long_press_target
-
-      # Long press + on/off/toggle (geen scene).
-      - conditions:
-          - condition: trigger
-            id: long_press
-          - condition: template
-            value_template: "{{ long_press_action == 'on' and not long_press_has_scene }}"
-        sequence:
-          - action: homeassistant.turn_on
-            target: !input long_press_target
-
-      - conditions:
-          - condition: trigger
-            id: long_press
-          - condition: template
-            value_template: "{{ long_press_action == 'off' and not long_press_has_scene }}"
-        sequence:
-          - action: homeassistant.turn_off
-            target: !input long_press_target
-
-      - conditions:
-          - condition: trigger
-            id: long_press
-          - condition: template
-            value_template: "{{ long_press_action == 'toggle' and not long_press_has_scene }}"
-        sequence:
-          - action: homeassistant.toggle
-            target: !input long_press_target
+            id: long
+        sequence: !input long_press_action
+    default: !input press_action

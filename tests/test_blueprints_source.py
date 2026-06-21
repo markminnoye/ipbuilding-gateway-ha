@@ -314,80 +314,42 @@ def test_standard_blueprint_excludes_cover_and_release() -> None:
     assert "cover" not in input_text
 
 
-def test_standard_blueprint_uses_wait_for_trigger_for_short_long_disambiguation() -> None:
-    """button_standard.yaml must use wait_for_trigger to pick press vs long_press.
+def test_standard_blueprint_uses_single_and_long_press_triggers() -> None:
+    """button_standard.yaml must key on single_press and long_press triggers.
 
-    The gateway broadcasts `press`, then (after the hold threshold) `long_press`,
-    then `release`. A naive blueprint with separate top-level triggers fires
-    the press action before the long_press event arrives. The v4 fix is to
-    subscribe only to `press` at the top level, then wait up to 600 ms
-    inside the action for `release` (short) or `long_press` (long).
+    From v7 the gateway classifies the press itself: it emits `single_press`
+    on release of a short tap, and `long_press` at the hold threshold while
+    the button is still held. The two are mutually exclusive, so a clean
+    two-trigger blueprint with no timing logic replaces the v4-v6
+    `wait_for_trigger` disambiguation. The race that the 600 ms timeout
+    produced (long press never fired on default 1.5 s threshold buttons)
+    is gone.
 
-    v5 fix: HA sets ``wait.trigger`` to ``None`` on timeout — not the whole
-    ``wait`` variable. A guard that checks ``wait is none`` (the v4 mistake)
-    never triggers at timeout and leaves the second condition's
-    ``wait.trigger.to_state`` access unguarded, raising
-    ``UndefinedError: 'None' has no attribute 'to_state'``. v5 uses the
-    community-standard ``wait.trigger is none`` / ``wait.trigger is not none``
-    short-circuit guards.
+    Both triggers must filter on ``attribute: event_type`` (event entities
+    store the type in the attribute, not the state) and must NOT be a
+    top-level press + a wait_for_trigger pattern.
     """
     path = _BLUEPRINT_DIR / "button_standard.yaml"
     if not path.exists():
         return
     text = path.read_text(encoding="utf-8")
-    assert "wait_for_trigger:" in text, (
-        "button_standard.yaml must use wait_for_trigger to disambiguate "
-        "short and long presses (v4 contract)."
-    )
-    # Isolate the wait_for_trigger block by anchoring on the `action:` line
-    # that follows the trigger block. The top-level trigger section also
-    # mentions `wait_for_trigger` in a comment, so a naive `text.index()`
-    # would land in that comment.
     action_idx = text.index("\naction:")
-    trigger_block = text[:action_idx]
-    # The description (above `trigger:`) can legitimately mention
-    # `wait_for_trigger` as an English term — only the YAML sections
-    # (trigger, variables, mode) must not contain an actual `wait_for_trigger`
-    # block. So we anchor on `trigger:` instead of the start of the file.
     yaml_body_idx = text.index("\ntrigger:")
     yaml_trigger_block = text[yaml_body_idx:action_idx]
-    assert "wait_for_trigger" not in yaml_trigger_block or all(
-        line.lstrip().startswith("#") for line in yaml_trigger_block.splitlines()
-        if "wait_for_trigger" in line
-    ), "wait_for_trigger must live inside the action block, not at the trigger level"
-    wait_block = text[action_idx:]
-    assert 'attribute: event_type' in wait_block, (
-        "wait_for_trigger in button_standard.yaml must filter on "
-        "attribute: event_type (event entities store press/long_press/"
-        "release in the attribute, not the state)."
+    assert 'to: "single_press"' in yaml_trigger_block, (
+        "button_standard.yaml must trigger on single_press at the top "
+        "level (v7 contract: gateway classifies the press)."
     )
-    assert 'to: "long_press"' in wait_block
-    assert 'to: "release"' in wait_block
-    assert "milliseconds:" in wait_block or "seconds:" in wait_block, (
-        "wait_for_trigger must specify a timeout so a missing release "
-        "edge does not stall the automation."
+    assert 'to: "long_press"' in yaml_trigger_block, (
+        "button_standard.yaml must trigger on long_press at the top "
+        "level (v7 contract: gateway classifies the press)."
     )
-    # v5 community-style guards: short-press branch matches either a real
-    # `release` event or a timeout (wait.trigger is none); long-press branch
-    # only matches a real long_press event (wait.trigger is not none).
-    # The legacy `wait is none` form is rejected because it never fires on
-    # timeout — HA keeps `wait` and only nulls out `wait.trigger`.
-    assert "wait.trigger is none" in wait_block, (
-        "button_standard.yaml must guard the timeout branch with "
-        "`wait.trigger is none` (community convention; v4's `wait is none` "
-        "never matches at timeout and leaves the next attribute access "
-        "unguarded → UndefinedError)."
-    )
-    assert "wait.trigger is not none" in wait_block, (
-        "button_standard.yaml must guard the long_press branch with "
-        "`wait.trigger is not none` before reading `to_state.attributes`."
-    )
-    assert "wait is none" not in wait_block or all(
-        line.lstrip().startswith("#") for line in wait_block.splitlines()
-        if "wait is none" in line and "wait.trigger is none" not in line
-    ), (
-        "Legacy `wait is none` checks are not a valid timeout guard — HA "
-        "keeps `wait` itself defined at timeout; only `wait.trigger` is none."
+    # No more wait_for_trigger: the gateway already disambiguates.
+    assert "wait_for_trigger" not in text, (
+        "button_standard.yaml must not use wait_for_trigger — the gateway "
+        "now classifies the press (single_press on release, long_press "
+        "at threshold), so a timing-based disambiguation is no longer "
+        "needed and reintroduces the 600 ms vs 1.5 s race."
     )
 
 
@@ -505,13 +467,15 @@ def test_standard_blueprint_uses_action_selector() -> None:
 
 
 def test_standard_blueprint_wires_press_long_action_inputs() -> None:
-    """`button_standard.yaml` must call `sequence: !input` on each branch.
+    """`button_standard.yaml` must run the operator action lists.
 
-    The community-canonical wiring for an `action:` selector is
-    `sequence: !input <input_name>` inside a `choose:` block. The
-    blueprint should not embed any pre-baked service calls under the
-    press or long_press branches — the whole point of v6 is that the
-    operator owns the action list.
+    v7 maps `single_press` (the short-tap gesture) to `press_action` and
+    `long_press` to `long_press_action`. The wiring accepts both the
+    `sequence: !input <name>` form (inside a `choose:` branch) and the
+    `default: !input <name>` form (the v7 default-fallback shape), so we
+    look for the `!input` references directly. The blueprint should not
+    embed any pre-baked service calls — the operator owns the action
+    list.
     """
     path = _BLUEPRINT_DIR / "button_standard.yaml"
     if not path.exists():
@@ -519,13 +483,13 @@ def test_standard_blueprint_wires_press_long_action_inputs() -> None:
     text = path.read_text(encoding="utf-8")
     action_idx = text.index("\naction:")
     action_block = text[action_idx:]
-    assert "sequence: !input press_action" in action_block, (
-        "button_standard.yaml must run the operator-defined press "
-        "action list via `sequence: !input press_action`."
+    assert "!input press_action" in action_block, (
+        "button_standard.yaml must reference the operator-defined "
+        "press action list via `!input press_action`."
     )
-    assert "sequence: !input long_press_action" in action_block, (
-        "button_standard.yaml must run the operator-defined long_press "
-        "action list via `sequence: !input long_press_action`."
+    assert "!input long_press_action" in action_block, (
+        "button_standard.yaml must reference the operator-defined "
+        "long_press action list via `!input long_press_action`."
     )
     # Geen hardcoded services meer onder de press/long_press branches.
     for forbidden in (
