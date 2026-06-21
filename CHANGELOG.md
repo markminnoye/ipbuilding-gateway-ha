@@ -23,9 +23,7 @@ Backward compatibiliteit is de norm — een versie van deze companion
 blijft werken met de huidige gateway tot een `### Breaking:`-regel
 anders meldt.
 
-## [Unreleased]
-
-## [1.3.0]
+## [1.3.0] - 2026-06-21
 
 ### Added
 - **`single_press` button event + `single_pressed` device trigger.** De gateway classificeert een korte druk nu zelf: `single_press` bij loslaten onder de drempel, `long_press` bij overschrijding van de drempel. De companion voegt `single_press` toe aan de EventEntity event-types, vuurt `ha_ipbuilding_gateway.button_single_pressed` op de HA bus, en tagt de gesture-events met hun HA/Matter-standaard naam in `event_data` (`press` → `press_start`, `single_press` → `press_end`, `long_press` → `long_press_start`). De raw `release` blijft bewust ongetagd (volgt zowel korte als lange druk, dus geen eenduidig standaard-equivalent). De automation-editor toont een nieuwe "Single pressed" device trigger. Vereist gateway ≥ 1.1.0 om de nieuwe `single_press`-events te ontvangen.
