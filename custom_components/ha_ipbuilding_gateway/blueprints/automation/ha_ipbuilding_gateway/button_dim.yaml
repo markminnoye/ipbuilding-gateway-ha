@@ -1,8 +1,8 @@
-# ipbuilding_blueprint_version: 6
+# ipbuilding_blueprint_version: 7
 blueprint:
   name: IPBuilding wandknop — dimmen
   description: >
-    **Blueprint-versie: 6.** Hue-style continuous dimming for an
+    **Blueprint-versie: 7.** Hue-style continuous dimming for an
     IPBuilding IP1100PoE wall switch.
     Use this for a wall button that should:
       - toggle the target light on a short press;
@@ -127,11 +127,12 @@ trigger:
     id: hold
   - platform: state
     entity_id: !input button_entity
+    # Only a release that ends a hold (long_press → release). A short-tap
+    # release (single_press → release) must NOT fire here: with mode:restart
+    # it would cancel the in-flight single_press toggle before it runs.
     attribute: event_type
+    from: "long_press"
     to: "release"
-    not_from:
-      - unavailable
-      - unknown
     id: release
   # Auto-flip on hitting either brightness endpoint.
   - platform: numeric_state

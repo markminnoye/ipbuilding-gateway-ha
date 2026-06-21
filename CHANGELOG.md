@@ -23,6 +23,29 @@ Backward compatibiliteit is de norm — een versie van deze companion
 blijft werken met de huidige gateway tot een `### Breaking:`-regel
 anders meldt.
 
+## [1.4.1] - 2026-06-22
+
+### Fixed
+- **Race tussen `single_press` en de trailing `release` in `button_dim` (v6 → v7) en `button_cover` (v6 → v7).** De gateway stuurt bij een korte tik `single_press` én `release` vlak na elkaar. De top-level `release`-trigger reageerde óók op die korte-druk-release: in `button_dim` (`mode: restart`) kon dat de net gestarte `single_press`-toggle cancellen (korte druk deed dan niets); in `button_cover` (`mode: single`) kon de trailing release een geconfigureerde korte-druk-actie ongedaan maken via `cover.stop_cover`. De `release`-trigger is nu gescopet met `from: "long_press"`, zodat hij alléén vuurt op een release die een hold afsluit (loop stoppen + richting flippen / cover stoppen). `button_scene` had dit probleem niet (geen release-trigger).
+
+### Added
+- **`button_scene` v4 / `button_dim` v7 / `button_cover` v7** triggeren nu direct op `single_press` en `long_press` — geen `wait_for_trigger` of raw `press`-abonnement meer. Evenknie van de `button_standard` v7 wijziging uit v1.3.0. De gateway classificeert de druk zelf, dus de race tussen raw `press` en `long_press` is weg.
+- **`single_press` als entity-state vertaling** in `entity.event.button.state` voor zowel EN als NL. Na v1.3.0 vuurde de EventEntity al het `single_press`-event, maar de UI toonde "Unknown" als state omdat de vertaling ontbrak. Korte drukken tonen nu correct "Single pressed" / "Kort ingedrukt".
+
+### Changed
+- **`button_dim` v5 → v7**: `wait_for_trigger` met 600 ms timeout op de press-branch is weg; de toggle hangt nu direct aan het `single_press`-event. De `release`-trigger is gescopet met `from: "long_press"` (zie Fixed). De release-flip-guard (`trigger.from_state.attributes.event_type == 'long_press'`) blijft — een korte-druk-release mag de dim-richting niet flippen.
+- **`button_scene` v3 → v4**: top-level `single_press` trigger vervangt de raw `press` trigger. `long_press` ongewijzigd.
+- **`button_cover` v5 → v7**: top-level `single_press` trigger vervangt de raw `press` trigger voor de optionele korte-druk actie; de `release`-trigger is gescopet met `from: "long_press"` (zie Fixed).
+
+### Tests
+- `test_dim_blueprint_waits_on_press_before_toggling`, `test_dim_blueprint_short_press_continues_on_timeout` en `test_scene_blueprint_activates_scenes_on_press_and_long_press` zijn bijgewerkt om het v6-contract af te dwingen: geen `wait_for_trigger`, directe `single_press`-trigger, geen raw `press` in de scene-blueprint.
+
+### Migratie
+- Bestaande automation-instanties van `button_scene`, `button_dim` en `button_cover` blijven werken: de input-namen zijn ongewijzigd (`press_scene`, `long_press_scene`, `target_light`, `direction_helper`, `cover_entity`, `hold_direction`, `release_action`, `press_action`). `blueprints.py` synchroniseert de blueprint-bestanden zelf, de input-mapping blijft 1-op-1.
+
+### Vereisten
+- Gateway ≥ **1.1.0** voor de `single_press`-events. Oudere gateways sturen geen `single_press`; in dat geval vuurt de nieuwe `button_dim` v6 toggle nooit en moet de operator terugvallen op een oudere blueprint of de gateway updaten.
+
 ## [1.3.0] - 2026-06-21
 
 ### Added

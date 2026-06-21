@@ -1,8 +1,8 @@
-# ipbuilding_blueprint_version: 6
+# ipbuilding_blueprint_version: 7
 blueprint:
   name: "[Voorbeeld] IPBuilding wandknop — gordijn"
   description: >
-    **Blueprint-versie: 6.** **Dit is een voorbeeld-blueprint** — niet productie-klaar. De
+    **Blueprint-versie: 7.** **Dit is een voorbeeld-blueprint** — niet productie-klaar. De
     Companion-ontwikkelaars hebben geen `cover` hardware om dit te
     testen; de blueprint is naar beste weten opgebouwd uit de
     IPBuilding-specificatie en de Home Assistant `cover`-services,
@@ -142,11 +142,12 @@ trigger:
     id: long_press
   - platform: state
     entity_id: !input button_entity
+    # Only a release that ends a hold (long_press → release). A short-tap
+    # release (single_press → release) must NOT fire the stop branch and
+    # undo a configured short-press action.
     attribute: event_type
+    from: "long_press"
     to: "release"
-    not_from:
-      - unavailable
-      - unknown
     id: release
 
 action:
