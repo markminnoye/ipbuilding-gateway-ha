@@ -1,10 +1,18 @@
-# ipbuilding_blueprint_version: 8
+# ipbuilding_blueprint_version: 9
 blueprint:
-  name: IPBuilding wandknop — kort en lang
+  name: IPBuilding wandknop
   description: >
-    **Blueprint-versie: 8.** Wandknop met korte én lange druk — elk
-    een eigen actie-reeks. Lang indrukken is optioneel.
-    Voor continu dimmen: `button_dim`.
+    **Blueprint-versie: 9.** Universele wandknop met drie actie-slots:
+    Indrukken (korte tik), Vasthouden (long press) en Loslaten
+    (release ná een lange druk). Alle drie de slots zijn optioneel;
+    laat ze leeg om alleen korte druk te gebruiken.
+
+    Voor een kant-en-klare dimmer-configuratie (toggle / dim_start /
+    dim_stop) kun je deze blueprint vullen met de native services
+    `light.toggle`, `ha_ipbuilding_gateway.dim_start`,
+    `ha_ipbuilding_gateway.dim_stop` — of direct kiezen voor de
+    presets `button_dim` (native ramp) of `button_dim_stepwise`
+    (HA-stapsgewijs met helper).
   domain: automation
   source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/button_standard.yaml
 
@@ -23,34 +31,50 @@ blueprint:
                   integration: ha_ipbuilding_gateway
 
     press_section:
-      name: Korte druk
+      name: Indrukken
       icon: mdi:gesture-tap-button
       input:
         press_action:
-          name: Actie bij korte druk
-          description: Eén of meer acties op korte druk.
+          name: Actie bij indrukken
+          description: Eén of meer acties op een korte tik (single_press).
           default: []
           selector:
             action:
 
     long_press_section:
-      name: Lang indrukken (optioneel)
+      name: Vasthouden
       icon: mdi:gesture-two-tap-button
       input:
         long_press_action:
-          name: Actie bij lange druk
-          description: Eén of meer acties op lange druk. Laat leeg voor alleen korte druk.
+          name: Actie bij vasthouden
+          description: Eén of meer acties zolang de knop wordt vastgehouden (long_press).
           default: []
           selector:
             action:
 
-mode: single
+    release_section:
+      name: Loslaten
+      icon: mdi:gesture-tap-hold
+      input:
+        release_action:
+          name: Actie bij loslaten (ná vasthouden)
+          description: >
+            Actie die alleen vuurt op de release die een lange druk
+            afsluit (Matter long_release patroon). Laat leeg als je
+            geen loslaat-actie wilt.
+          default: []
+          selector:
+            action:
+
+mode: queued
 
 trigger:
-  # The gateway now classifies the press: single_press fires on the
-  # release of a short tap, long_press fires at the hold threshold
-  # while the button is still held. They are mutually exclusive, so no
-  # wait/timeout is needed.
+  # The gateway classifies the press: single_press fires on the release
+  # of a short tap, long_press fires at the hold threshold while the
+  # button is still held, release fires when the button is released.
+  # single_press and long_press are mutually exclusive; release fires
+  # after either, but the action block scopes it to long_press only
+  # via the `from: "long_press"` guard.
   - platform: state
     entity_id: !input button_entity
     attribute: event_type
@@ -67,6 +91,16 @@ trigger:
       - unavailable
       - unknown
     id: long
+  - platform: state
+    entity_id: !input button_entity
+    # Only a release that ends a hold (long_press → release) fires here.
+    # A short-tap release (single_press → release) does NOT match, so the
+    # trailing release of a brief tap cannot reach the release branch
+    # (Matter long_release pattern).
+    attribute: event_type
+    from: "long_press"
+    to: "release"
+    id: release
 
 action:
   - choose:
@@ -74,4 +108,8 @@ action:
           - condition: trigger
             id: long
         sequence: !input long_press_action
+      - conditions:
+          - condition: trigger
+            id: release
+        sequence: !input release_action
     default: !input press_action

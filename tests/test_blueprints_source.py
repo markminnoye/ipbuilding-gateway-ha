@@ -331,16 +331,18 @@ def test_no_blueprint_exposes_automation_name_or_area_input() -> None:
         )
 
 
-def test_standard_blueprint_excludes_cover_and_release() -> None:
-    """button_standard.yaml must not act on cover services or release triggers.
+def test_standard_blueprint_has_three_slots_with_release_after_long_press() -> None:
+    """button_standard v9 exposes three action slots: press, long_press, release.
 
-    Hold-to-move / release-to-stop for covers needs ``long_press`` plus
-    ``release`` wiring that ``button_standard`` deliberately does not
-    provide. Operators use ``button_dim`` for dimming or build a custom
-    automation for covers.
+    The release trigger must be scoped with ``from: "long_press"`` so a
+    short-tap release (single_press → release) does not fire the release
+    branch (Matter ``long_release`` pattern). The release action slot
+    remains optional (default ``[]``) — the blueprint must still work
+    with only ``press_action`` configured.
 
-    The description may still mention ``cover`` or ``release`` in prose;
-    only actions and top-level triggers must stay out.
+    The cover-specific wiring (hold-to-move / release-to-stop) does
+    not belong here either: ``button_dim`` is the dimmer preset and
+    operators build a custom cover automation from the device page.
     """
     path = _BLUEPRINT_DIR / "button_standard.yaml"
     if not path.exists():
@@ -350,12 +352,27 @@ def test_standard_blueprint_excludes_cover_and_release() -> None:
     action_block = text[action_idx:]
     assert "cover." not in action_block
     trigger_block = text[text.index("\ntrigger:") : action_idx]
-    assert 'to: "release"' not in trigger_block, (
-        "button_standard.yaml must not have a top-level trigger on "
-        "release — that fires on every press."
+    assert 'from: "long_press"' in trigger_block, (
+        "button_standard.yaml must scope the release trigger with "
+        '`from: "long_press"` so a short-tap release does not fire the '
+        "release branch (Matter long_release pattern)."
+    )
+    assert 'to: "release"' in trigger_block, (
+        "button_standard.yaml v9 must include a top-level release "
+        "trigger to support the Loslaten slot."
     )
     input_text = text[text.index("input:") : text.index("\ntrigger:")]
-    assert "cover" not in input_text
+    assert "press_action:" in input_text
+    assert "long_press_action:" in input_text
+    assert "release_action:" in input_text
+    for slot in ("press_action", "long_press_action", "release_action"):
+        assert re.search(
+            rf"{slot}:[\s\S]*?selector:\s*\n\s+action:",
+            input_text,
+        ), f"{slot} must use `selector: action:`"
+    assert "!input press_action" in action_block
+    assert "!input long_press_action" in action_block
+    assert "!input release_action" in action_block
 
 
 def test_standard_blueprint_uses_single_and_long_press_triggers() -> None:
@@ -395,6 +412,15 @@ def test_standard_blueprint_uses_single_and_long_press_triggers() -> None:
         "at threshold), so a timing-based disambiguation is no longer "
         "needed and reintroduces the 600 ms vs 1.5 s race."
     )
+    # v9: third trigger for the Loslaten slot, scoped to long_press only.
+    assert (
+        'from: "long_press"' in yaml_trigger_block
+        and 'to: "release"' in yaml_trigger_block
+    ), (
+        "button_standard.yaml v9 must include the release trigger "
+        'scoped with `from: "long_press"` so a short-tap release does '
+        "not fire the release branch (Matter long_release pattern)."
+    )
 
 
 def test_button_blueprints_use_event_type_attribute_on_triggers() -> None:
@@ -406,7 +432,7 @@ def test_button_blueprints_use_event_type_attribute_on_triggers() -> None:
     for "Hal R → bureau toggle" reported on 2026-06-19.
     """
     targets = {
-        "button_standard.yaml": ["press"],
+        "button_standard.yaml": ["press", "release"],
         "button_dim.yaml": ["press", "long_press", "release"],
         "dim_button.yaml": ["press"],
     }
@@ -455,6 +481,9 @@ def test_standard_blueprint_uses_action_selector() -> None:
     assert "long_press_action:" in text, (
         "button_standard.yaml must declare a `long_press_action` input"
     )
+    assert "release_action:" in text, (
+        "button_standard.yaml v9 must declare a `release_action` input"
+    )
     # Action-selector: letterlijk `selector:\n        action:` (action is
     # de canonieke selector-key uit HA, zonder opties).
     assert re.search(
@@ -463,6 +492,9 @@ def test_standard_blueprint_uses_action_selector() -> None:
     assert re.search(
         r"long_press_action:[\s\S]*?selector:\s*\n\s+action:", text
     ), "long_press_action input must use `selector: action:`"
+    assert re.search(
+        r"release_action:[\s\S]*?selector:\s*\n\s+action:", text
+    ), "release_action input must use `selector: action:`"
     # De oude select/target-inputs moeten weg zijn.
     for forbidden in (
         "press_target:",
@@ -518,6 +550,10 @@ def test_standard_blueprint_wires_press_long_action_inputs() -> None:
     assert "!input long_press_action" in action_block, (
         "button_standard.yaml must reference the operator-defined "
         "long_press action list via `!input long_press_action`."
+    )
+    assert "!input release_action" in action_block, (
+        "button_standard.yaml v9 must reference the operator-defined "
+        "release action list via `!input release_action`."
     )
     # Geen hardcoded services meer onder de press/long_press branches.
     for forbidden in (
