@@ -162,23 +162,26 @@ Packaged YAML files live at
 
 | Use case | Blueprint |
 |----------|-----------|
-| Short + long press → any service, any target, any data | `button_standard` |
-| Short press → scene (optional long → scene) | `button_scene` |
-| Toggle + dim while held | `button_dim` |
-| Hold to move cover, release to stop (example) | `button_cover` |
+| Short + long press → scenes, lights, scripts, any service | `button_standard` |
+| Toggle + dim while held (native ramp, **no helper**) | `button_dim` |
+| Toggle + dim while held (HA-stepwise, needs helper) | `button_dim_stepwise` |
 
-`button_dim` needs an `input_boolean` helper for dim direction. Create one
-via **Settings → Devices & services → Helpers → Toggle** before configuring
-the blueprint.
+`button_dim` (native) needs **no** helper: the gateway sends a single
+`dim_start`/`dim_stop` per hold and the IP0300PoE module ramps and reverses
+direction itself. Use `button_dim_stepwise` only if you want HA to drive the
+dimming in steps — that one needs an `input_boolean` helper for dim direction
+(**Settings → Devices & services → Helpers → Toggle**).
 
-### `button_dim` v3 behaviour
+### `button_dim` (native) behaviour
 
-- **Short press** → toggle the light (no direction flip).
-- **Long press** → dim loop. If the light was off, the first hold turns it
-  on at 1 % and continues dimming in the configured direction.
-- **Release after a long press** → flip the dim direction for the next hold.
-- **Release after a short press** → no flip.
-- **Hitting 1 % / 100 %** during a dim → flip the direction automatically.
+- **Short press** → toggle the light.
+- **Long press** → start the native ramp on the dimmer (`dim_start`). The
+  module ramps and auto-reverses direction on each successive hold.
+- **Release** → stop the ramp (`dim_stop`); the dimmer reports the level reached.
+
+`button_dim_stepwise` keeps the older HA-driven loop: it steps the brightness
+on a timer and flips an `input_boolean` direction helper on release / at the
+1 % / 100 % endpoints.
 
 ### 1. Auto-install (default)
 
@@ -189,7 +192,8 @@ the blueprint.
 3. **Settings → Automations & scenes → Blueprints** → pick e.g.
    `IPBuilding wandknop — dimmen`.
 4. **Create automation → Use blueprint**, fill in the button
-   (`event.<hardware_id>`), the target lamp, and the dim helper.
+   (`event.<hardware_id>`) and the target lamp. A dim-direction helper is
+   only needed for `button_dim_stepwise`, not native `button_dim`.
 
 ### 2. Import via URL (alternative)
 
@@ -199,9 +203,8 @@ If you prefer not to auto-install, paste a GitHub URL into
 | Blueprint | Import URL |
 |-----------|------------|
 | `button_standard` | [import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2Fha-ipbuilding-gateway%2Fblob%2Fmain%2Fcustom_components%2Fha_ipbuilding_gateway%2Fblueprints%2Fautomation%2Fha_ipbuilding_gateway%2Fbutton_standard.yaml) |
-| `button_scene` | [import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2Fha-ipbuilding-gateway%2Fblob%2Fmain%2Fcustom_components%2Fha_ipbuilding_gateway%2Fblueprints%2Fautomation%2Fha_ipbuilding_gateway%2Fbutton_scene.yaml) |
 | `button_dim` | [import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2Fha-ipbuilding-gateway%2Fblob%2Fmain%2Fcustom_components%2Fha_ipbuilding_gateway%2Fblueprints%2Fautomation%2Fha_ipbuilding_gateway%2Fbutton_dim.yaml) |
-| `button_cover` | [import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2Fha-ipbuilding-gateway%2Fblob%2Fmain%2Fcustom_components%2Fha_ipbuilding_gateway%2Fblueprints%2Fautomation%2Fha_ipbuilding_gateway%2Fbutton_cover.yaml) |
+| `button_dim_stepwise` | [import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2Fha-ipbuilding-gateway%2Fblob%2Fmain%2Fcustom_components%2Fha_ipbuilding_gateway%2Fblueprints%2Fautomation%2Fha_ipbuilding_gateway%2Fbutton_dim_stepwise.yaml) |
 
 On HA 2024.10+, the **Import** links above open the import dialog on your
 instance via My Home Assistant.
@@ -250,8 +253,7 @@ from `Settings → Automations & scenes → + Create automation
 
 ### 4. YAML reference (advanced)
 
-The packaged blueprints (`button_standard`, `button_scene`, `button_dim`,
-`button_cover`) demonstrate the patterns. Copy the `trigger` and
+The packaged blueprints (`button_standard`, `button_dim`) demonstrate the patterns. Copy the `trigger` and
 `action` blocks into your own `automations.yaml` and adapt entity IDs.
 
 ## Actions

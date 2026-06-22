@@ -1,43 +1,20 @@
-# ipbuilding_blueprint_version: 7
+# ipbuilding_blueprint_version: 8
 blueprint:
   name: IPBuilding wandknop — dimmen
   description: >
-    **Blueprint-versie: 7.** Hue-style continuous dimming for an
-    IPBuilding IP1100PoE wall switch.
-    Use this for a wall button that should:
-      - toggle the target light on a short press;
-      - dim the target light while held;
-      - flip the dim direction on release (after a long press) and on
-        hitting 1 % / 100 %.
-
-    The companion exposes `single_press`, `long_press`, and `release`
-    events on the event entity of each physical button — v6 hooks into
-    `single_press` directly so the toggle fires the moment the operator
-    releases a short tap, with no 600 ms wait. The gateway classifies
-    the press itself: a short tap emits `single_press` on release, a
-    hold emits `long_press` at the threshold.
-
-    Behaviour:
-      - Short press → toggle the light (no direction flip).
-      - Hold (long_press) → dim loop. The first hold turns the light on
-        at 1 % when it was off, then continues dimming.
-      - Release after a long press → flip the direction helper.
-      - Release after a short press → no flip (the helper only flips
-        after a real long press, or on hitting a brightness endpoint).
-
-    A separate `button_cover` blueprint handles hold-to-move / release-to-stop
-    for curtains and screens. A separate `button_standard` blueprint handles
-    plain on/off/toggle/scene mappings for short and long press.
+    **Blueprint-versie: 8.** Kort indrukken = toggle · vasthouden =
+    native hold-to-dim ramp (gateway + IP0300PoE regelen de richting
+    zelf) · loslaten = ramp stoppen. Geen helper nodig.
+    Wil je in plaats daarvan HA-gestuurd, stapsgewijs dimmen (met een
+    richting-helper)? Gebruik `button_dim_stepwise` (alternatief).
+    Voor gewone aan/uit/scene: `button_standard`.
   domain: automation
   source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/button_dim.yaml
 
   input:
     button_entity:
       name: Knop
-      description: >
-        De IPBuilding event-entity van de fysieke wandknop
-        (bv. `event.2f8185190000df`). De entity moet ingeschakeld zijn
-        in Instellingen → Apparaten & entiteiten.
+      description: IPBuilding event-entity van de wandknop.
       selector:
         entity:
           filter:
@@ -51,60 +28,6 @@ blueprint:
         entity:
           domain: light
           multiple: false
-
-    direction_helper:
-      name: Dim-richting helper
-      description: >
-        `input_boolean` helper die de huidige dim-richting bijhoudt.
-        AAN = volgende hold dimt omhoog, UIT = omlaag. De blueprint
-        flipt deze na elke release van een lange druk en bij het
-        bereiken van 1 % / 100 %.
-
-        Aanmaken: Instellingen → Apparaten & services → Helpers → Toggle.
-        Vul bij **Naam** een leesbaar label in (mag spaties bevatten),
-        bv. "Keuken knop 1 — dim omhoog". Stel de **Entity ID** apart in
-        op alleen kleine letters, cijfers en underscores, bv.
-        `ipb_keuken_knop_1_dim_up`. Spaties in de entity_id veroorzaken
-        een fout bij het opslaan.
-      selector:
-        entity:
-          domain: input_boolean
-
-    dim_step_pct:
-      name: Dim-stap %
-      description: Helderheidsverandering per loop-iteratie.
-      default: 5
-      selector:
-        number:
-          min: 1
-          max: 100
-          unit_of_measurement: "%"
-          mode: slider
-
-    dim_interval_ms:
-      name: Dim-interval (ms)
-      description: Pauze tussen dim-stappen. Kleiner = sneller dimmen, meer verkeer.
-      default: 200
-      selector:
-        number:
-          min: 50
-          max: 2000
-          unit_of_measurement: "ms"
-          mode: slider
-
-    dim_boundary_pct:
-      name: Dim-grens %
-      description: >
-        Initiële richting als de helper-state nog niet beschikbaar is
-        (< dit % → omhoog, ≥ dit % → omlaag). Ook gebruikt als zachte
-        hint bij opstart.
-      default: 50
-      selector:
-        number:
-          min: 0
-          max: 100
-          unit_of_measurement: "%"
-          mode: slider
 
 mode: restart
 
@@ -127,39 +50,21 @@ trigger:
     id: hold
   - platform: state
     entity_id: !input button_entity
-    # Only a release that ends a hold (long_press → release). A short-tap
-    # release (single_press → release) must NOT fire here: with mode:restart
-    # it would cancel the in-flight single_press toggle before it runs.
+    # Only a release that ends a hold (long_press → release) fires here.
+    # A short-tap release (single_press → release) must NOT fire the stop
+    # path — with mode:restart it would cancel the in-flight single_press
+    # toggle before it runs.
     attribute: event_type
     from: "long_press"
     to: "release"
     id: release
-  # Auto-flip on hitting either brightness endpoint.
-  - platform: numeric_state
-    entity_id: !input target_light
-    attribute: brightness
-    above: 254
-    id: hit_top
-    for:
-      seconds: 1
-  - platform: numeric_state
-    entity_id: !input target_light
-    attribute: brightness
-    below: 3
-    id: hit_bottom
-    for:
-      seconds: 1
 
 action:
   - choose:
-    # Short press → toggle the light. The gateway emits `single_press`
-    # on release of a short tap, so this fires immediately when the
-    # operator releases — no 600 ms timing disambiguation needed (v6
-    # contract: the gateway classifies the press, the blueprint just
-    # maps events to actions). The fallback timeout that v5 used to
-    # guard against a missing release event is gone: a long press fires
-    # `long_press` instead of `single_press`, so the two are mutually
-    # exclusive.
+      # Short press → toggle the light. The gateway emits `single_press`
+      # on release of a short tap, so this fires immediately when the
+      # operator releases. v8 keeps the v6/v7 contract: the gateway
+      # classifies the press, the blueprint just maps events to actions.
       - conditions:
           - condition: trigger
             id: single_press
@@ -168,62 +73,25 @@ action:
             target:
               entity_id: !input target_light
 
-      # Hold → repeat the dim loop while the trigger id is "hold".
+      # Hold → start the native ramp on the IP0300PoE. The module ramps
+      # and auto-reverses direction on each successive hold; no helper,
+      # no repeat, no endpoint detection in HA. The dim_speed is the
+      # module's internal setting (matches native IPBox behaviour).
       - conditions:
           - condition: trigger
             id: hold
         sequence:
-          - variables:
-              step: !input dim_step_pct
-              interval_ms: !input dim_interval_ms
-              direction_helper: !input direction_helper
-              sign: "{{ 1 if is_state(direction_helper, 'on') else -1 }}"
-          # If the light is off, turn it on at 1 % before dimming so the
-          # first hold doesn't start from a black lamp.
-          - if:
-              - condition: state
-                entity_id: !input target_light
-                state: "off"
-            then:
-              - action: light.turn_on
-                target:
-                  entity_id: !input target_light
-                data:
-                  brightness_pct: 1
-                  transition: 0.2
-          - repeat:
-              while:
-                - condition: trigger
-                  id: hold
-              sequence:
-                - action: light.turn_on
-                  target:
-                    entity_id: !input target_light
-                  data:
-                    brightness_step_pct: "{{ step * sign }}"
-                    transition: 0.2
-                - delay:
-                    milliseconds: !input dim_interval_ms
+          - action: ha_ipbuilding_gateway.dim_start
+            target:
+              entity_id: !input target_light
 
-      # Release → flip the direction helper only when the previous state
-      # was long_press (i.e. an actual long press happened).
+      # Release (after a real long press) → stop the ramp. The dimmer
+      # replies with the level reached when the stop landed and the
+      # companion light follows via the existing state_changed wire.
       - conditions:
           - condition: trigger
             id: release
-          - condition: template
-            value_template: "{{ trigger.from_state is not none and trigger.from_state.attributes.event_type == 'long_press' }}"
         sequence:
-          - action: input_boolean.toggle
+          - action: ha_ipbuilding_gateway.dim_stop
             target:
-              entity_id: !input direction_helper
-
-      # Endpoint hit → flip the direction helper.
-      - conditions:
-          - condition: trigger
-            id:
-              - hit_top
-              - hit_bottom
-        sequence:
-          - action: input_boolean.toggle
-            target:
-              entity_id: !input direction_helper
+              entity_id: !input target_light

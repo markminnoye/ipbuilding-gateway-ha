@@ -115,16 +115,23 @@ def test_dim_blueprint_does_not_set_invalid_max() -> None:
 
 
 def test_dim_blueprint_has_helper_user_instructions() -> None:
-    """The dim blueprint must mention entity_id vs. name for its helper.
+    """The dim blueprint must mention entity_id vs. name where it still has
+    user-editable helpers.
 
     Spacing in helper entity_ids broke installs in earlier versions —
     the operator-facing text must spell out that the entity_id must
-    contain only lowercase letters, digits and underscores.
+    contain only lowercase letters, digits and underscores. v8 dropped
+    the ``direction_helper`` input entirely (the dimmer module owns the
+    ramp direction) so this test only applies while any user-facing
+    helper input remains.
     """
     dim = _BLUEPRINT_DIR / "button_dim.yaml"
     if not dim.exists():
         return
     text = dim.read_text(encoding="utf-8").lower()
+    if "direction_helper" not in text and "dim_step_pct" not in text:
+        # v8+ blueprint — native ramp, no helper inputs.
+        return
     assert "entity id" in text or "entity_id" in text
     assert "spaties" in text or "space" in text
 
@@ -160,15 +167,30 @@ def test_dim_blueprint_waits_on_press_before_toggling() -> None:
 
 
 def test_dim_blueprint_release_flip_guards_on_long_press() -> None:
-    """button_dim v3 must only flip the direction helper after a real long press.
+    """button_dim v3-v7 must only flip the direction helper after a real long press.
 
     Firing the flip on every release would also flip after a short press,
-    which makes the helper meaningless as a direction tracker.
+    which makes the helper meaningless as a direction tracker. v8 dropped
+    the direction helper entirely (the dimmer module owns ramp direction
+    and auto-reverses on each successive hold), so the guard is gone too —
+    but the ``from: "long_press"`` release-trigger scope remains, because
+    a short-tap release must NOT fire the stop service either.
     """
     dim = _BLUEPRINT_DIR / "button_dim.yaml"
     if not dim.exists():
         return
     text = dim.read_text(encoding="utf-8")
+    if "direction_helper" not in text:
+        # v8+ blueprint — no helper to flip; the release trigger must still
+        # be scoped with ``from: "long_press"`` so a short-tap release does
+        # not fire the stop service and cancel the in-flight single_press.
+        trigger_block = text.split("action:", 1)[0]
+        assert 'from: "long_press"' in trigger_block, (
+            "button_dim.yaml v8 must still scope the release trigger with "
+            '`from: "long_press"` so a short-tap release does not cancel '
+            "the single_press toggle or fire a stray dim_stop."
+        )
+        return
     assert "trigger.from_state.attributes.event_type == 'long_press'" in text, (
         "button_dim.yaml must guard the release branch on "
         "trigger.from_state.attributes.event_type == 'long_press' so a "
@@ -201,16 +223,60 @@ def test_dim_blueprint_short_press_continues_on_timeout() -> None:
     )
 
 
-def test_dim_blueprint_turns_light_on_when_dimming_from_off() -> None:
-    """button_dim v3 must turn the light on at 1% before dimming from off.
+def test_dim_blueprint_uses_native_ramp_services() -> None:
+    """button_dim v8 must drive the dimmer via the native ramp services.
 
-    Without the turn-on step the first hold on an off lamp would never
-    produce light — ``brightness_step_pct`` only steps an already-on lamp.
+    v8 removes the ``brightness_step_pct`` repeat loop entirely. The
+    hold branch dispatches ``ha_ipbuilding_gateway.dim_start``; the
+    release branch dispatches ``ha_ipbuilding_gateway.dim_stop``. The
+    dimmer module owns ramp direction — no direction helper, no
+    endpoint-trigger flip, no step/interval inputs.
     """
     dim = _BLUEPRINT_DIR / "button_dim.yaml"
     if not dim.exists():
         return
     text = dim.read_text(encoding="utf-8")
+    assert "ha_ipbuilding_gateway.dim_start" in text, (
+        "button_dim.yaml v8 must call ha_ipbuilding_gateway.dim_start on "
+        "the hold branch (native ramp — the dimmer module owns direction)."
+    )
+    assert "ha_ipbuilding_gateway.dim_stop" in text, (
+        "button_dim.yaml v8 must call ha_ipbuilding_gateway.dim_stop on "
+        "the release branch (after a real long press)."
+    )
+    # The legacy loop is gone.
+    assert "brightness_step_pct" not in text, (
+        "button_dim.yaml v8 must not use brightness_step_pct — the native "
+        "ramp replaces the per-step loop."
+    )
+    assert "repeat:" not in text, (
+        "button_dim.yaml v8 must not use repeat: — the native ramp "
+        "replaces the hold loop."
+    )
+    assert "direction_helper" not in text, (
+        "button_dim.yaml v8 must not reference direction_helper — the "
+        "dimmer module owns ramp direction and auto-reverses."
+    )
+
+
+def test_dim_blueprint_turns_light_on_when_dimming_from_off() -> None:
+    """button_dim v3-v7 must turn the light on at 1% before dimming from off.
+
+    Without the turn-on step the first hold on an off lamp would never
+    produce light — ``brightness_step_pct`` only steps an already-on lamp.
+    v8 dropped the loop entirely (native ramp) and relies on the dimmer
+    module's last-level memory + the ``T<ch>991000`` toggle path: the
+    module's own behaviour handles off→on when a dim_start lands on an
+    off channel. This test only applies while the v3-v7 loop pattern is
+    still in the file.
+    """
+    dim = _BLUEPRINT_DIR / "button_dim.yaml"
+    if not dim.exists():
+        return
+    text = dim.read_text(encoding="utf-8")
+    if "brightness_step_pct" not in text:
+        # v8 native ramp — the dimmer module handles the off→on case.
+        return
     assert "brightness_pct: 1" in text, (
         "button_dim.yaml must turn the light on at 1% before dimming "
         "from the off state."
@@ -244,8 +310,7 @@ def test_no_blueprint_exposes_automation_name_or_area_input() -> None:
     blueprint-name and prompts for the room. Re-declaring those fields
     as blueprint inputs produced a confusing duplicate-label UX
     (v3 of ``button_toggle``) and a save-time schema error
-    (v3 of ``button_standard``, ``button_dim``, ``button_cover``,
-    ``button_scene`` — all removed).
+    (v3 of ``button_standard`` and ``button_dim`` — all removed).
     """
     for path in _shipped_blueprints():
         text = path.read_text(encoding="utf-8")
@@ -267,43 +332,29 @@ def test_no_blueprint_exposes_automation_name_or_area_input() -> None:
 
 
 def test_standard_blueprint_excludes_cover_and_release() -> None:
-    """button_standard.yaml must not act on cover or release behaviour.
+    """button_standard.yaml must not act on cover services or release triggers.
 
-    Curtains and screens have their own blueprint (button_cover). Mixing
-    them here confuses operators because the release event fires after
-    every press. The standard blueprint may still mention `cover` and
-    `release` in its description text (e.g. as a pointer to the dedicated
-    blueprints) — only the actions and triggers must stay out.
+    Hold-to-move / release-to-stop for covers needs ``long_press`` plus
+    ``release`` wiring that ``button_standard`` deliberately does not
+    provide. Operators use ``button_dim`` for dimming or build a custom
+    automation for covers.
 
-    Note: v4 introduced a `wait_for_trigger` block inside the action
-    that *does* subscribe to the `release` event, but only as an
-    edge-detection source — never as a top-level trigger. The check
-    below inspects the top-level `trigger:` block to keep that
-    distinction explicit.
+    The description may still mention ``cover`` or ``release`` in prose;
+    only actions and top-level triggers must stay out.
     """
     path = _BLUEPRINT_DIR / "button_standard.yaml"
     if not path.exists():
         return
     text = path.read_text(encoding="utf-8")
-    # No cover service call should appear in the action block.
-    assert "cover." not in text
-    # Top-level `trigger:` block must not subscribe to release/long_press.
-    # Split on the `action:` keyword so we only scan the top-level triggers.
-    trigger_block = text.split("action:", 1)[0]
+    action_idx = text.index("\naction:")
+    action_block = text[action_idx:]
+    assert "cover." not in action_block
+    trigger_block = text[text.index("\ntrigger:") : action_idx]
     assert 'to: "release"' not in trigger_block, (
         "button_standard.yaml must not have a top-level trigger on "
-        "release — that fires on every press and races with the "
-        "press/long_press disambiguation in the action block."
+        "release — that fires on every press."
     )
-    assert 'to: "long_press"' not in trigger_block, (
-        "button_standard.yaml must not have a top-level trigger on "
-        "long_press — it would run alongside the press action when "
-        "the button is held past the hold threshold. Disambiguation "
-        "happens inside the action block via wait_for_trigger."
-    )
-    # `activate_scene` is the only scene-shaped action; activate_scene
-    # plus a cover domain would be contradictory — guard the input instead.
-    input_text = text[text.index("input:"):]
+    input_text = text[text.index("input:") : text.index("\ntrigger:")]
     assert "cover" not in input_text
 
 
@@ -346,20 +397,6 @@ def test_standard_blueprint_uses_single_and_long_press_triggers() -> None:
     )
 
 
-def test_cover_blueprint_uses_hold_and_release_triggers() -> None:
-    """button_cover.yaml must hook into long_press and release events.
-
-    The cover pattern is: while held, move in a direction; on release,
-    stop. Both trigger types must be present.
-    """
-    path = _BLUEPRINT_DIR / "button_cover.yaml"
-    if not path.exists():
-        return
-    text = path.read_text(encoding="utf-8")
-    assert 'to: "long_press"' in text
-    assert 'to: "release"' in text
-
-
 def test_button_blueprints_use_event_type_attribute_on_triggers() -> None:
     """Every active blueprint trigger on `event.<hw_id>` must filter on `event_type`.
 
@@ -370,8 +407,6 @@ def test_button_blueprints_use_event_type_attribute_on_triggers() -> None:
     """
     targets = {
         "button_standard.yaml": ["press"],
-        "button_cover.yaml": ["press", "long_press", "release"],
-        "button_scene.yaml": ["press", "long_press"],
         "button_dim.yaml": ["press", "long_press", "release"],
         "dim_button.yaml": ["press"],
     }
@@ -496,30 +531,6 @@ def test_standard_blueprint_wires_press_long_action_inputs() -> None:
             f"`{forbidden}`; the operator supplies services via the "
             "action-selector input."
         )
-
-
-def test_scene_blueprint_activates_scenes_on_press_and_long_press() -> None:
-    """button_scene.yaml must turn on scenes for single_press and optional long_press.
-
-    v4 hooks into ``single_press`` (gateway-classified short tap) and
-    ``long_press`` directly. The plain ``press`` event is no longer
-    subscribed to: it fires on every press, even when the operator is
-    starting a long press, so acting on it would race the long_press
-    action.
-    """
-    path = _BLUEPRINT_DIR / "button_scene.yaml"
-    assert path.exists(), "button_scene.yaml must be shipped"
-    text = path.read_text(encoding="utf-8")
-    assert 'to: "single_press"' in text
-    assert 'to: "long_press"' in text
-    assert "scene.turn_on" in text
-    assert 'to: "release"' not in text
-    assert 'to: "press"' not in text, (
-        "button_scene.yaml must not trigger on the raw `press` event — "
-        "the gateway now emits `single_press` on release of a short tap. "
-        "Acting on `press` would race the long_press action."
-    )
-    assert "cover." not in text
 
 
 def test_select_option_values_are_strings() -> None:

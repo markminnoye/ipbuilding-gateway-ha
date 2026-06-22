@@ -51,6 +51,28 @@
       "released": "Released"
     }
   },
+  "services": {
+    "dim_start": {
+      "name": "Start dim ramp",
+      "description": "Start a continuous hold-to-dim ramp on a dimmer channel. Sends D<ch>001003 to the IP0300PoE; the module ramps and auto-reverses direction on each successive hold. Pair with the stop service to halt the ramp.",
+      "fields": {
+        "target": {
+          "name": "Light entity",
+          "description": "The companion light entity backed by an IP0300PoE dimmer channel."
+        }
+      }
+    },
+    "dim_stop": {
+      "name": "Stop dim ramp",
+      "description": "Stop a dim ramp started by the dim_start service. Sends D<ch>001000; the dimmer replies with the level reached when the stop landed.",
+      "fields": {
+        "target": {
+          "name": "Light entity",
+          "description": "The companion light entity backed by an IP0300PoE dimmer channel."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "gateway_status": {

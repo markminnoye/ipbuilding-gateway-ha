@@ -23,6 +23,29 @@ Backward compatibiliteit is de norm — een versie van deze companion
 blijft werken met de huidige gateway tot een `### Breaking:`-regel
 anders meldt.
 
+## [Unreleased]
+
+### Added
+- **`ha_ipbuilding_gateway.dim_start` en `ha_ipbuilding_gateway.dim_stop` services** (entity-targeted, alleen `light.`). Starten/stoppen de native hold-to-dim ramp op een IP0300PoE-kanaal via de gateway-acties `DIM_START` / `DIM_STOP`. De IP0300PoE dimt zelf en draait de richting automatisch om bij elke volgende hold — geen `repeat`-lus, geen helper, geen step-configuratie in HA meer. Vereist gateway add-on vanaf de branch `feature/dimmer-downstream-td` (volgende release: `1.1.0`).
+- **`button_dim` v8** gebruikt de nieuwe services i.p.v. de oude `repeat` + `brightness_step_pct` + `direction_helper` + endpoint-trigger logica. Korte druk → `light.toggle`, vasthouden → `dim_start`, loslaten na hold → `dim_stop`. De `direction_helper` / `dim_step_pct` / `dim_interval_ms` / `dim_boundary_pct` inputs zijn verwijderd.
+- **`button_dim_stepwise` blueprint (alternatief)** — de oude HA-gestuurde, stapsgewijze dim-loop (met `input_boolean` richting-helper) blijft beschikbaar als apart alternatief voor wie de native ramp niet wil. Native `button_dim` blijft de aanbevolen keuze.
+
+## [1.6.0] - 2026-06-22
+
+### Removed
+- **`button_cover` blueprint** — ongevalideerd voorbeeld zonder cover-hardware in de testopstelling. Hold-to-move / release-to-stop hoort in een eigen automatisering (device triggers op `long_press` + `release`) of via `button_standard` voor eenvoudig open/sluiten op druk.
+
+### Breaking
+- **`button_cover` is no longer shipped.** Bestaande instanties op een lokale kopie in `config/blueprints/…/button_cover.yaml` blijven werken tot je die file verwijdert. Voor gordijnen: `long_press` → `cover.open_cover` / `cover.close_cover`, `release` → `cover.stop_cover` op de knop-event-entity.
+
+## [1.5.0] - 2026-06-22
+
+### Removed
+- **`button_scene` blueprint** — redundant with `button_standard`, which already supports `scene.turn_on` (and mixed actions) via the action-editor. New installs no longer receive this file from the companion package.
+
+### Breaking
+- **`button_scene` is no longer shipped.** Bestaande automation-instanties die op een eerder gesynchroniseerde kopie in `config/blueprints/…/button_scene.yaml` draaien blijven werken tot je die file verwijdert. Voor nieuwe knop→scene-mappings: gebruik `button_standard` en kies bij korte/lang druk de actie **Scène: Activeren**.
+
 ## [1.4.1] - 2026-06-22
 
 ### Fixed

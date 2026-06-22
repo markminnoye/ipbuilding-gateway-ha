@@ -51,6 +51,28 @@
       "released": "Losgelaten"
     }
   },
+  "services": {
+    "dim_start": {
+      "name": "Dim-ramp starten",
+      "description": "Start een continue hold-to-dim ramp op een dimmerkanaal. Verstuurt D<ch>001003 naar de IP0300PoE; de module dimt en draait de richting automatisch om bij elke volgende hold. Combineer met de stop-service om de ramp te stoppen.",
+      "fields": {
+        "target": {
+          "name": "Licht-entiteit",
+          "description": "De companion-lichtentiteit die gekoppeld is aan een IP0300PoE-dimmerkanaal."
+        }
+      }
+    },
+    "dim_stop": {
+      "name": "Dim-ramp stoppen",
+      "description": "Stop een dim-ramp die gestart is met de dim_start-service. Verstuurt D<ch>001000; de dimmer antwoordt met het niveau dat bereikt was bij het loslaten.",
+      "fields": {
+        "target": {
+          "name": "Licht-entiteit",
+          "description": "De companion-lichtentiteit die gekoppeld is aan een IP0300PoE-dimmerkanaal."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "gateway_status": {

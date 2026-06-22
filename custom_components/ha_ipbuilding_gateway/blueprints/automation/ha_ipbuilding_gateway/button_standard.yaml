@@ -1,27 +1,10 @@
-# ipbuilding_blueprint_version: 7
+# ipbuilding_blueprint_version: 8
 blueprint:
   name: IPBuilding wandknop — kort en lang
   description: >
-    **Blueprint-versie: 7.** Two-phase control for an IPBuilding
-    IP1100PoE wall switch. Use this when a short press and a long
-    press should drive different things.
-
-    Each phase takes a full action sequence — the same editor you see
-    when building an automation in Home Assistant. Pick the service,
-    the target, and any extra data yourself: brightness, transition,
-    multiple lights, scenes, helpers, scripts, notifications — anything
-    HA can do, the blueprint can do on press and on long press.
-
-    Long press is optional; leave the "Lang indrukken" actions empty to
-    only react to short presses.
-
-    Press-vs-long-press is decided in the gateway: a short tap emits
-    `single_press` on release, a hold emits `long_press` at the
-    threshold. The two are mutually exclusive, so this blueprint just
-    maps each to a full action sequence — no timing logic.
-
-    For dimming while held use `button_dim`. For curtains
-    (hold-to-move / release-to-stop) use `button_cover`.
+    **Blueprint-versie: 8.** Wandknop met korte én lange druk — elk
+    een eigen actie-reeks. Lang indrukken is optioneel.
+    Voor continu dimmen: `button_dim`.
   domain: automation
   source_url: https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/button_standard.yaml
 
@@ -32,10 +15,7 @@ blueprint:
       input:
         button_entity:
           name: Knop
-          description: >
-            De IPBuilding event-entity van de fysieke wandknop
-            (bv. `event.2f8185190000df`). De entity moet ingeschakeld
-            zijn in Instellingen → Apparaten & entiteiten.
+          description: IPBuilding event-entity van de wandknop.
           selector:
             entity:
               filter:
@@ -48,10 +28,7 @@ blueprint:
       input:
         press_action:
           name: Actie bij korte druk
-          description: >
-            Wat de automatisering doet op een korte druk. Dit is een
-            volledige action-editor — voeg één of meerdere service-calls
-            toe (lampen, scenes, helpers, scripts, notificaties, …).
+          description: Eén of meer acties op korte druk.
           default: []
           selector:
             action:
@@ -59,14 +36,10 @@ blueprint:
     long_press_section:
       name: Lang indrukken (optioneel)
       icon: mdi:gesture-two-tap-button
-      collapsed: true
       input:
         long_press_action:
           name: Actie bij lange druk
-          description: >
-            Wat de automatisering doet zodra de knop langer dan de
-            hold-drempel (~1,5 s) wordt vastgehouden. Laat leeg om
-            alleen op korte drukken te reageren.
+          description: Eén of meer acties op lange druk. Laat leeg voor alleen korte druk.
           default: []
           selector:
             action:

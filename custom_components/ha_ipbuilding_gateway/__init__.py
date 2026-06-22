@@ -21,6 +21,7 @@ from .coordinator import IPBuildingCoordinator
 from .entity import module_device_model, module_device_name
 from .hub import gateway_device_info
 from .room_mapping import apply_room_mappings, collect_unique_rooms, should_offer_room_mapping
+from .services import async_register_services, async_unregister_services
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +43,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry,
         ["light", "switch", "event", "button", "sensor"],
     )
+    # Register the hold-to-dim ramp services (dim_start / dim_stop). They go
+    # through the same WS command path the light platform already uses; no
+    # HTTP fallback — the dimmer must receive the ramp on time.
+    async_register_services(hass, coordinator)
     # The first WS snapshot schedules a debounced diff before platforms exist.
     # Seed known devices now so that diff pass does not recreate every entity.
     coordinator.seed_known_devices()
@@ -206,6 +211,7 @@ def _suggest_channel_areas(
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     coordinator: IPBuildingCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
+    async_unregister_services(hass)
     await coordinator.stop()
     # Home Assistant 2026.x removed the variadic ``platforms`` argument from
     # ``async_forward_entry_unload``; use ``async_unload_platforms`` instead.

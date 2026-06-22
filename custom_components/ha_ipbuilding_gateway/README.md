@@ -141,10 +141,9 @@ are copied (or upgraded) into your HA config folder
 
 | Blueprint | Purpose |
 |-----------|---------|
-| `button_standard` | Short + long press → full action-editor (any service, any target, any data) |
-| `button_scene` | Short press → scene; optional long press → scene |
-| `button_dim` | Toggle + dim while held (needs `input_boolean` helper) |
-| `button_cover` | Hold to move cover, release to stop (unvalidated example) |
+| `button_standard` | Short + long press → full action-editor (scenes, lights, scripts, any service) |
+| `button_dim` | Toggle + dim while held — **native ramp**, no helper (gateway sends `dim_start`/`dim_stop`, module ramps + auto-reverses) |
+| `button_dim_stepwise` | Alternative: HA-driven stepwise dimming (needs `input_boolean` direction helper) |
 
 > **Belangrijk (2026-06-20):** de state-triggers in alle blueprints
 > gebruiken `attribute: event_type`. Event entities slaan de
@@ -153,10 +152,17 @@ are copied (or upgraded) into your HA config folder
 > nooit; dat is de oorzaak van "Hal R → bureau toggle werkt niet"
 > (zie CHANGELOG v0.x).
 
-#### `button_dim` v3
+#### `button_dim` (native)
+
+- Short press → toggle the light.
+- Long press → `dim_start`; the IP0300PoE ramps and auto-reverses direction
+  on each successive hold (no helper, no HA-side loop).
+- Release → `dim_stop`; the dimmer reports the level reached.
+
+#### `button_dim_stepwise` (alternative)
 
 - Short press → toggle (no direction flip).
-- Long press → dim loop. First hold on an off lamp turns it on at 1 % and
+- Long press → HA dim loop. First hold on an off lamp turns it on at 1 % and
   continues dimming.
 - Release after a long press → flip the dim direction for the next hold.
 - Release after a short press → no flip.
