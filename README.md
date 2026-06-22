@@ -166,60 +166,11 @@ Packaged YAML files live at
 | Toggle + dim while held (native ramp, **no helper**) | `button_dim` |
 | Toggle + dim while held (HA-stepwise, needs helper) | `button_dim_stepwise` |
 
-`button_dim` (native) needs **no** helper: the gateway sends a single
-`dim_start`/`dim_stop` per hold and the IP0300PoE module ramps and reverses
-direction itself. Use `button_dim_stepwise` only if you want HA to drive the
-dimming in steps — that one needs an `input_boolean` helper for dim direction
-(**Settings → Devices & services → Helpers → Toggle**).
+`button_dim` (native) needs **no** helper — the IP0300PoE ramps and reverses
+direction itself. `button_dim_stepwise` is the HA-stepwise alternative and needs
+an `input_boolean` direction helper.
 
-### `button_dim` (native) behaviour
-
-- **Short press** → toggle the light.
-- **Long press** → start the native ramp on the dimmer (`dim_start`). The
-  module ramps and auto-reverses direction on each successive hold.
-- **Release** → stop the ramp (`dim_stop`); the dimmer reports the level reached.
-
-`button_dim_stepwise` keeps the older HA-driven loop: it steps the brightness
-on a timer and flips an `input_boolean` direction helper on release / at the
-1 % / 100 % endpoints.
-
-### 1. Auto-install (default)
-
-1. Enable the button event entity first:
-   `Settings → Devices & entities → Entities → filter "event" → enable`.
-2. Reload the IPBuilding Gateway integration (companion auto-syncs the
-   blueprints into `config/blueprints/automation/ha_ipbuilding_gateway/`).
-3. **Settings → Automations & scenes → Blueprints** → pick e.g.
-   `IPBuilding wandknop — dimmen`.
-4. **Create automation → Use blueprint**, fill in the button
-   (`event.<hardware_id>`) and the target lamp. A dim-direction helper is
-   only needed for `button_dim_stepwise`, not native `button_dim`.
-
-### 2. Import via URL (alternative)
-
-If you prefer not to auto-install, paste a GitHub URL into
-**Settings → Automations & scenes → Blueprints → Import blueprint**:
-
-| Blueprint | Import URL |
-|-----------|------------|
-| `button_standard` | [import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2Fha-ipbuilding-gateway%2Fblob%2Fmain%2Fcustom_components%2Fha_ipbuilding_gateway%2Fblueprints%2Fautomation%2Fha_ipbuilding_gateway%2Fbutton_standard.yaml) |
-| `button_dim` | [import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2Fha-ipbuilding-gateway%2Fblob%2Fmain%2Fcustom_components%2Fha_ipbuilding_gateway%2Fblueprints%2Fautomation%2Fha_ipbuilding_gateway%2Fbutton_dim.yaml) |
-| `button_dim_stepwise` | [import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2Fha-ipbuilding-gateway%2Fblob%2Fmain%2Fcustom_components%2Fha_ipbuilding_gateway%2Fblueprints%2Fautomation%2Fha_ipbuilding_gateway%2Fbutton_dim_stepwise.yaml) |
-
-On HA 2024.10+, the **Import** links above open the import dialog on your
-instance via My Home Assistant.
-
-### 3. Community blueprint (alternative)
-
-The HA community maintains blueprints that also work with the
-`press` / `long_press` / `release` event entities this companion creates:
-
-- **[Philips Hue Dimmer Switch (Z2M) — Ultimate Controller](https://community.home-assistant.io/t/z2m-philips-hue-dimmer-switch-ultimate-controller-device-triggers-double-clicks/977875)**
-- **[IKEA STYRBAR 4-Button Remote (ZHA / MQTT)](https://gist.github.com/ivvil/08c95674732b51bc4ccf79938471cdc9)**
-
-Install via HACS or the HA blueprint import dialog.
-
-### 3. Standard HA UI flow
+### 1. Standard HA UI flow
 
 From the device page (`Settings → Devices & entities →
 <your button> → ... → '+ Add to' → Create automation`), or
@@ -251,7 +202,7 @@ from `Settings → Automations & scenes → + Create automation
 - **Save**: the popup asks for a name. Use the friendly button name
   (e.g. "Keuken wandknop → Keuken LED") instead of the `event.<id>`.
 
-### 4. YAML reference (advanced)
+### 2. YAML reference (advanced)
 
 The packaged blueprints (`button_standard`, `button_dim`) demonstrate the patterns. Copy the `trigger` and
 `action` blocks into your own `automations.yaml` and adapt entity IDs.
