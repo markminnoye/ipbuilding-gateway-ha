@@ -115,7 +115,9 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
             if valid:
                 unique_id = instance_id or f"{host}:{port}"
                 await self.async_set_unique_id(unique_id)
-                self._abort_if_unique_id_configured(updates=user_input)
+                self._abort_if_unique_id_configured(
+                    updates=user_input, reload_on_update=False
+                )
                 return self.async_create_entry(
                     title=f"IPBuilding Gateway ({host})",
                     data={
@@ -160,7 +162,9 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
 
         instance_id = discovery_info.config.get("instance_id") or discovery_info.uuid
         await self.async_set_unique_id(instance_id)
-        self._abort_if_unique_id_configured(updates={CONF_HOST: host, CONF_PORT: port})
+        self._abort_if_unique_id_configured(
+            updates={CONF_HOST: host, CONF_PORT: port}, reload_on_update=False
+        )
 
         self._discovery_info = GatewayDiscoveryInfo(
             host=host,
@@ -230,7 +234,7 @@ class IPBuildingConfigFlow(ConfigFlow, domain=DOMAIN):
         unique_id = parsed.instance_id or f"{host}:{port}"
         await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured(
-            updates={CONF_HOST: host, CONF_PORT: port}
+            updates={CONF_HOST: host, CONF_PORT: port}, reload_on_update=False
         )
 
         self._discovery_info = GatewayDiscoveryInfo(

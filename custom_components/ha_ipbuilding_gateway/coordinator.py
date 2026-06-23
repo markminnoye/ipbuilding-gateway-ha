@@ -263,6 +263,59 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Run POST /api/v1/discover on the gateway."""
         await self.async_run_discover_with_result()
 
+    async def async_run_modules_refresh_with_result(self) -> dict[str, Any]:
+        """POST /api/v1/modules/refresh; return module and button counts.
+
+        Re-fetches ``getSysSet`` (and ``getButtons`` for input modules) from
+        all field modules the gateway already knows. The gateway broadcasts
+        a fresh WS snapshot, so the snapshot-diff path picks up freshly
+        renamed buttons without an integration reload.
+        """
+        url = f"http://{self._host}:{self._port}/api/v1/modules/refresh"
+        result: dict[str, Any] = {
+            "ok": False,
+            "module_count": 0,
+            "button_count": 0,
+            "error": None,
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={},
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp:
+                    if resp.status != 200:
+                        result["error"] = f"HTTP {resp.status}"
+                        log.warning("Modules refresh returned %s", resp.status)
+                    else:
+                        payload = await resp.json()
+                        modules = payload.get("modules") or []
+                        result["module_count"] = len(modules)
+                        result["button_count"] = sum(
+                            len(m.get("buttons") or [])
+                            for m in modules
+                            if m.get("type") == "input"
+                        )
+                        result["ok"] = True
+                        log.info(
+                            "Modules refresh completed: %d modules, %d buttons",
+                            result["module_count"],
+                            result["button_count"],
+                        )
+        except Exception as exc:
+            result["error"] = str(exc) or exc.__class__.__name__
+            log.warning("Modules refresh failed: %s", exc)
+
+        await self.async_fetch_modules()
+        await self.async_request_refresh()
+        self._notify_gateway()
+        return result
+
+    async def async_trigger_modules_refresh(self) -> None:
+        """Run POST /api/v1/modules/refresh on the gateway."""
+        await self.async_run_modules_refresh_with_result()
+
     def register_gateway_listener(
         self, callback: Callable[[dict[str, Any]], None]
     ) -> None:

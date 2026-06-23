@@ -236,4 +236,7 @@ async def _async_update_listener(
     """
     if hass.config_entries.options.async_progress_by_handler(entry.entry_id):
         return
-    await hass.config_entries.async_reload(entry.entry_id)
+    # HA 2026.6+: integrations with an update listener must schedule reloads
+    # here instead of calling async_reload directly or relying on config-flow
+    # helpers that also reload (avoids double reload; required from 2026.12).
+    hass.config_entries.async_schedule_reload(entry.entry_id)

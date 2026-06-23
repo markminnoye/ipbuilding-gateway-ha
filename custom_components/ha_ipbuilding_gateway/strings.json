@@ -34,12 +34,30 @@
       "init": {
         "title": "IPBuilding Gateway Options",
         "menu_options": {
-          "map_rooms": "Assign IPBuilding groups to areas"
+          "map_rooms": "Assign IPBuilding groups to areas",
+          "scan_bus": "Scan field bus for modules",
+          "refresh_modules": "Update buttons and module info"
         }
       },
       "map_rooms": {
         "title": "Assign IPBuilding groups to Home Assistant areas",
         "description": "Assign {room_count} group(s) from your IPBuilding installation to Home Assistant areas. Leave empty to create an area with the same name."
+      },
+      "scan_bus": {
+        "title": "Scan for modules",
+        "description": "Scans your IPBuilding network for relay, dimmer, and input modules. Use this after adding new hardware or when a module has been given a new IP address. Can take up to half a minute."
+      },
+      "scan_bus_done": {
+        "title": "Scan complete",
+        "description": "{summary}"
+      },
+      "refresh_modules": {
+        "title": "Refresh module settings",
+        "description": "Fetches the current settings from modules that are already known: button names, long-press duration, and network details. Use this after changing a wall module. This does **not** find new modules — use *Scan for modules* for that."
+      },
+      "refresh_modules_done": {
+        "title": "Refresh complete",
+        "description": "{summary}"
       }
     }
   },
@@ -86,7 +104,7 @@
     },
     "button": {
       "discover_sweep": {
-        "name": "Run discovery sweep"
+        "name": "Scan field bus for modules"
       }
     },
     "event": {

@@ -25,6 +25,18 @@ anders meldt.
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-06-23
+
+### Added
+- **Tandwiel-menu: "Modules opzoeken op de veldbus"** — stuurt `POST /api/v1/discover` op de gateway en toont het resultaat (`{added} toegevoegd, {changed} bijgewerkt, {removed} verwijderd` + duur) in een vervolgscherm. Vervangt de noodzaak om de discover-knop op het gateway-apparaat te zoeken. Tot ~120 s timeout (zelfde budget als de bestaande knop).
+- **Tandwiel-menu: "Knoppen en module-info bijwerken"** — stuurt `POST /api/v1/modules/refresh` op de gateway en toont het aantal bijgewerkte modules en knoppen. Gebruik dit nadat je een wandknop of IP1100PoE-instelling op de module zelf hebt gewijzigd; de gateway pusht dan een WS-snapshot zodat de companion nieuwe namen/drempels oppikt zonder integratie-reload. Vindt **geen** nieuwe modules — daarvoor blijft *Modules opzoeken*.
+
+### Changed
+- **`button.ipbuilding_gateway_run_discovery_sweep` hernoemd** van "Run discovery sweep" / "Discovery sweep starten" naar "Scan field bus for modules" / "Modules opzoeken op de veldbus" zodat de naam consistent is met het nieuwe menu-item. Geen functionele wijziging.
+
+### Fixed
+- **HA 2026.6 update-listener reload** — config flow gebruikt `reload_on_update=False`; de update listener plant reload via `async_schedule_reload` i.p.v. `async_reload`. Voorkomt dubbele reload en de deprecation-warning die vanaf HA 2026.12 een error wordt.
+
 ## [1.7.1] - 2026-06-23
 
 ### Added

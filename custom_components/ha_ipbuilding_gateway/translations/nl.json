@@ -34,12 +34,30 @@
       "init": {
         "title": "IPBuilding Gateway Opties",
         "menu_options": {
-          "map_rooms": "IPBuilding-groepen aan HA-ruimtes toewijzen"
+          "map_rooms": "IPBuilding-groepen aan HA-ruimtes toewijzen",
+          "scan_bus": "Modules opzoeken op de veldbus",
+          "refresh_modules": "Knoppen en module-info bijwerken"
         }
       },
       "map_rooms": {
         "title": "IPBuilding-groepen aan Home Assistant-ruimtes toewijzen",
         "description": "Wijs {room_count} groep(en) uit je IPBuilding-installatie toe aan ruimtes in Home Assistant. Laat leeg om een ruimte met dezelfde naam aan te maken."
+      },
+      "scan_bus": {
+        "title": "Modules opzoeken",
+        "description": "Doorzoekt je IPBuilding-netwerk naar relay-, dimmer- en inputmodules. Gebruik dit na nieuwe hardware of wanneer een module een ander IP-adres heeft gekregen. Kan tot een halve minuut duren."
+      },
+      "scan_bus_done": {
+        "title": "Scan voltooid",
+        "description": "{summary}"
+      },
+      "refresh_modules": {
+        "title": "Module-instellingen bijwerken",
+        "description": "Haalt de actuele instellingen op van modules die al bekend zijn: knopnamen, lang-drukduur en netwerkgegevens. Gebruik dit na wijzigingen op een wandmodule. Vindt **geen** nieuwe modules — daarvoor gebruik je *Modules opzoeken*."
+      },
+      "refresh_modules_done": {
+        "title": "Bijwerken voltooid",
+        "description": "{summary}"
       }
     }
   },
@@ -86,7 +104,7 @@
     },
     "button": {
       "discover_sweep": {
-        "name": "Discovery sweep starten"
+        "name": "Modules opzoeken op de veldbus"
       }
     },
     "event": {

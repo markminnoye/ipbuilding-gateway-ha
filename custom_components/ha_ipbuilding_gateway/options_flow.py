@@ -1,11 +1,19 @@
 """Options flow for ha_ipbuilding_gateway.
 
-Only the room→area mapping step remains: the onboarding wizard was
-removed in v1.2.0, but operators can still explicitly link each gateway
-``room`` to a Home Assistant area from the integration options (the
-tandwiel). Submitting the form calls ``apply_room_mappings`` and stores
-the mapping in ``entry.options[CONF_ROOM_MAPPINGS]``; ``__init__.py``
-reapplies the stored mapping on every setup.
+Three operator-facing actions in the integration options (tandwiel):
+
+- **Ruimtes koppelen** (``map_rooms``) — map gateway ``room`` values to
+  Home Assistant areas. The onboarding wizard was removed in v1.2.0;
+  this menu item is the explicit place to (re)run the mapping. Stores
+  results in ``entry.options[CONF_ROOM_MAPPINGS]``; ``__init__.py``
+  reapplies them on every setup.
+- **Modules opzoeken op de veldbus** (``scan_bus``) — forced ARP-sweep
+  + HTTP identify via ``POST /api/v1/discover``. Finds new, changed,
+  and removed modules. Long-running (up to 120 s).
+- **Module-instellingen bijwerken** (``refresh_modules``) — re-fetch
+  ``getSysSet`` and ``getButtons`` from modules the gateway already
+  knows via ``POST /api/v1/modules/refresh``. Faster than a scan
+  (typically a few seconds) and does **not** look for new hardware.
 
 In HA 2026.6+ ``OptionsFlow.config_entry`` is a read-only property
 backed by ``self.hass.config_entries.async_get_known_entry`` — the
@@ -50,15 +58,19 @@ class IPBuildingOptionsFlowHandler(OptionsFlow):
         Skips straight to ``async_step_map_rooms`` when ``__init__.py``'s
         ``_maybe_offer_room_mapping`` auto-launched this flow right after
         the gateway's rooms first became known — the operator should land
-        on the room-mapping form, not the (single-option) menu.
+        on the room-mapping form, not the (multi-option) menu.
         """
         flag_key = f"{self.config_entry.entry_id}_auto_room_mapping"
         if self.hass.data.get(DOMAIN, {}).pop(flag_key, False):
             return await self.async_step_map_rooms()
         return self.async_show_menu(
             step_id="init",
-            menu_options=["map_rooms"],
+            menu_options=["map_rooms", "scan_bus", "refresh_modules"],
         )
+
+    # -------------------------------------------------------------------------
+    # Ruimtes koppelen (existing)
+    # -------------------------------------------------------------------------
 
     async def async_step_map_rooms(
         self, user_input: dict[str, Any] | None = None
@@ -120,3 +132,102 @@ class IPBuildingOptionsFlowHandler(OptionsFlow):
             data_schema=vol.Schema(schema),
             description_placeholders={"room_count": str(len(rooms))},
         )
+
+    # -------------------------------------------------------------------------
+    # Modules opzoeken op de veldbus
+    # -------------------------------------------------------------------------
+
+    async def async_step_scan_bus(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Run the field-bus scan and show the result.
+
+        A separate confirm step would render an empty form (no fields
+        to submit) and look like "invisible text" to the operator. The
+        scan is fast enough on real networks that we kick it off as
+        soon as the menu item is selected, then land on the
+        ``_done`` step with the result summary. The gateway's
+        120 s timeout remains the upper bound.
+        """
+        coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        result = await coordinator.async_run_discover_with_result()
+        placeholders = _scan_placeholders(result)
+        return self.async_show_form(
+            step_id="scan_bus_done",
+            description_placeholders=placeholders,
+        )
+
+    async def async_step_scan_bus_done(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Return to the options menu after a completed scan."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["map_rooms", "scan_bus", "refresh_modules"],
+        )
+
+    # -------------------------------------------------------------------------
+    # Module-instellingen bijwerken
+    # -------------------------------------------------------------------------
+
+    async def async_step_refresh_modules(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Re-fetch module metadata and show the result.
+
+        Same reasoning as ``async_step_scan_bus``: an empty confirm
+        form would render with no input fields, leaving the operator
+        looking at a page with only a Submit button. Run the call
+        directly and land on the ``_done`` step.
+        """
+        coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        result = await coordinator.async_run_modules_refresh_with_result()
+        placeholders = _refresh_placeholders(result)
+        return self.async_show_form(
+            step_id="refresh_modules_done",
+            description_placeholders=placeholders,
+        )
+
+    async def async_step_refresh_modules_done(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Return to the options menu after a completed refresh."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["map_rooms", "scan_bus", "refresh_modules"],
+        )
+
+
+def _scan_placeholders(result: dict[str, Any]) -> dict[str, str]:
+    """Build description_placeholders for the scan-done step."""
+    if not result.get("ok"):
+        return {
+            "summary": "Scan mislukt — controleer of de gateway bereikbaar is.",
+            "ok": "false",
+        }
+    added = len(result.get("added") or [])
+    changed = len(result.get("changed") or [])
+    removed = len(result.get("removed") or [])
+    duration_s = (int(result.get("duration_ms") or 0) + 500) // 1000
+    if added == 0 and changed == 0 and removed == 0:
+        summary = f"Geen wijzigingen gevonden ({duration_s} s)."
+    else:
+        summary = (
+            f"{added} toegevoegd, {changed} bijgewerkt, "
+            f"{removed} verwijderd ({duration_s} s)."
+        )
+    return {"summary": summary, "ok": "true"}
+
+
+def _refresh_placeholders(result: dict[str, Any]) -> dict[str, str]:
+    """Build description_placeholders for the refresh-done step."""
+    if not result.get("ok"):
+        error = result.get("error") or "onbekende fout"
+        return {
+            "summary": f"Bijwerken mislukt: {error}.",
+            "ok": "false",
+        }
+    modules = int(result.get("module_count") or 0)
+    buttons = int(result.get("button_count") or 0)
+    summary = f"{modules} module(s) en {buttons} knop(pen) bijgewerkt."
+    return {"summary": summary, "ok": "true"}
